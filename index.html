@@ -4,42 +4,58 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>神秘语法检测器</title>
-    <style>  
-      body {
-        margin: 0;
-      } 
+    <style>
+        body {
+            background-color: #d2efff;
+        }
+        .title{
+            text-align: center;
+            transform: translateY(18px);
+        }
+        .input{
+            position: absolute;
+            top:15%;
+            left: 5%;
+        }
+        .inputText{
+            background-color: #ffffff;
+            width: 580px;
+            height: 300px;
+            padding: 1%;
+            border: 3px solid #5ce1e6;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: "Arial";
+            font-size: medium;
+            resize: none;
+            
+        }
+        textarea:focus {
+            outline: none;
+        }
+        .output{
+            position: absolute;
+            top:15%;
+            right: 5%;
+            background-color: #c2dcff;
+            width: 595px;
+            height: 450px;
+            padding: 1%;
+            border: 3px solid #d9d9d9;
+            border-radius: 10px;
+            
+        }
     </style>
   </head>
   <body>
-	  <div style="
-    background-color:#f1f1f1;
-    text-align: center;
-    padding: 40px;
-    ">
-      <img src= 'https://kangwenchang.com/logo.png' alt = "kwc" width:"80px" height="80px">
+    <div class = "title">
+        <h1>TFLS 语法纠正程序</h1>
     </div>
-    <div style = "
-      max-width: 700px;
-      margin: 30px auto;
-      padding: 15px;
-      line-height: 1.7;
-      text-align: center;
-      
-    ">
-      <p>这是一个语法检测器</p>
-      <p>你可以粘贴文本来进行检测</p>
-      <p>等待检测完成后你可以看到错误的地方</p>
-      <p>通过学习相应的语法知识点来修改错误</p>
-      <p>直到所有错误更正后，你就提升了自己的写作水平！</p>
+    <div class = "input">
+        <textarea class="inputText" type="text" placeholder="请粘贴需要检测的文本，或上传文件后检测"></textarea>
     </div>
-    <div style="
-    background-color:#59e7c4ad;
-    text-align: center;
-    padding: 40px;
-    font-size: 12px;
-    ">
-    <p>检测结果仅供参考</p>
-    <a href="https://www.bilibili.com">联系我们</a>
+    <div class = "output">
+        <p>结果展示</p>
     </div>
   </body>
 </html>
