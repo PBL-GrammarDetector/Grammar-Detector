@@ -21,7 +21,6 @@
             background-color: #ffffff;
             width: 580px;
             height: 300px;
-            padding: 1%;
             border: 3px solid #5ce1e6;
             border-radius: 10px;
             padding: 20px;
@@ -37,13 +36,79 @@
             position: absolute;
             top:15%;
             right: 5%;
+
+            
+        }
+        .outputText{
             background-color: #c2dcff;
             width: 595px;
-            height: 450px;
-            padding: 1%;
+            height: 400px;
+            padding: 20px;
             border: 3px solid #d9d9d9;
             border-radius: 10px;
-            
+            font-family: Arial;
+            font-size: medium;
+            color: #666;
+
+            resize: none;
+        }
+        .button-group {
+            position: absolute;
+            top: 480px;
+            left: 75px;
+            display: flex;
+            gap: 20px;
+        }
+        .btn {
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .button-disabled {
+            background-color: #707070;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .button-enabled {
+            background-color: #0078d7;
+            cursor: pointer;
+            opacity: 1;
+        }
+        .hint-text {
+            position: absolute;
+            top: 540px;
+            left: 75px;
+            font-size: 16px;
+            color: #666;
+        }
+        .result-note {
+            position: absolute;
+            top: 500px;
+            right: 100px;
+            font-size: 16px;
+            color: #333;
+            margin-right: 5px;
+        }
+        .footer-links {
+            margin-top: 5px;
+            position: absolute;
+            top: 620px;
+            right: 80px;
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+        }
+        .footer-link {
+            color: #333;
+            text-decoration: none;
+            background: #b0d9ff;
+            padding: 5px 10px;
+            border-radius: 4px;
         }
     </style>
   </head>
@@ -55,7 +120,67 @@
         <textarea class="inputText" type="text" placeholder="请粘贴需要检测的文本，或上传文件后检测"></textarea>
     </div>
     <div class = "output">
-        <p>结果展示</p>
+        <textarea class="outputText" type="text" placeholder="结果展示"></textarea>
     </div>
+  <div class="button-group">
+    <button id="checkBtn" class="btn">语法检查</button>
+    <button id="uploadBtn" class="btn">上传附件</button>
+    <button id="resetBtn" class="btn">重置</button>
+  </div>
+  <div class="hint-text">
+    提示文字：<br>
+    点击左侧[语法检查]按钮，即可查看语法问题及知识点讲解
+  </div>
+  <div class="result-note">
+    检测结果仅供参考
+  </div>
+  <div class="footer-links">
+    <a href="#" class="footer-link">使用帮助</a>
+    <a href="#" class="footer-link">常见问题</a>
+    <a href="#" class="footer-link">关于我们</a>
+    <a href="#" class="footer-link">反馈问题</a>
+  </div>
+  <script>
+        // 获取 DOM 元素
+        const inputTextarea = document.getElementsByClassName('inputText')[0];
+        const outputTextarea = document.getElementsByClassName('outputText')[0];
+        const copyButton = document.getElementById('checkBtn');
+        const resetButton = document.getElementById('resetBtn');
+        
+
+        // 按钮点击事件：将输入框的内容复制到输出框
+        copyButton.addEventListener('click', function() {
+            // 获取用户输入的内容
+            const userInput = inputTextarea.value;
+            // 将内容设置到目标文本框
+            outputTextarea.value = userInput;
+        });
+
+        resetButton.addEventListener("click", function(){
+            inputTextarea.value = null;
+            updateCheckButtonState();
+        })
+
+        copyButton.disabled = true;
+        copyButton.classList.add('button-disabled');
+        
+        function updateCheckButtonState(){
+            const hasText = inputTextarea.value.trim().length > 0;
+            
+            if (hasText) {
+                copyButton.disabled = false;
+                copyButton.classList.remove('button-disabled');
+                copyButton.classList.add('button-enabled');
+            } else {
+                copyButton.disabled = true;
+                copyButton.classList.remove('button-enabled');
+                copyButton.classList.add('button-disabled');
+            }
+        }
+
+        // 监听输入事件
+        inputTextarea.addEventListener('input', updateCheckButtonState);
+
+    </script>
   </body>
 </html>
