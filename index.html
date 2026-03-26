@@ -4,42 +4,359 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>神秘语法检测器</title>
-    <style>  
-      body {
-        margin: 0;
-      } 
+    <style>
+        body {
+            background-color: #d2efff;
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+        }
+        .title{
+            text-align: center;
+            transform: translateY(18px);
+        }
+        .input{
+            position: absolute;
+            top:15%;
+            left: 5%;
+        }
+        .inputText{
+            background-color: #ffffff;
+            width: 580px;
+            height: 300px;
+            border: 3px solid #5ce1e6;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: "Arial";
+            font-size: medium;
+            resize: none;
+        }
+        textarea:focus {
+            outline: none;
+        }
+        .output{
+            position: absolute;
+            top:15%;
+            right: 5%;
+        }
+        .outputText{
+            background-color: #c2dcff;
+            width: 595px;
+            height: 400px;
+            padding: 20px;
+            border: 3px solid #d9d9d9;
+            border-radius: 10px;
+            font-family: "Arial";
+            font-size: medium;
+            color: #333;
+            resize: none;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .button-group {
+            position: absolute;
+            top: 480px;
+            left: 75px;
+            display: flex;
+            gap: 20px;
+        }
+        .btn {
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .button-disabled {
+            background-color: #707070;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .button-enabled {
+            background-color: #0078d7;
+            cursor: pointer;
+            opacity: 1;
+        }
+        .hint-text {
+            position: absolute;
+            top: 540px;
+            left: 75px;
+            font-size: 16px;
+            color: #666;
+        }
+        .result-note {
+            position: absolute;
+            top: 500px;
+            right: 100px;
+            font-size: 16px;
+            color: #333;
+            margin-right: 5px;
+        }
+        .footer-links {
+            margin-top: 5px;
+            position: absolute;
+            top: 620px;
+            right: 80px;
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+        }
+        .footer-link {
+            color: #333;
+            text-decoration: none;
+            background: #b0d9ff;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .footer-link:hover {
+            background: #8fc9ff;
+        }
+        .credit-links{
+            margin-top: 5px;
+            position: absolute;
+            top: 620px;
+            left: 75px;
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+        }
+        .credit-link{
+            color: rgb(100, 146, 193)
+        }
+        .loading-text {
+            font-size: 14px;
+            color: #0078d7;
+            margin-left: 15px;
+            display: inline-block;
+        }
+        .error-text {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        /* 文件上传隐藏域 */
+        #fileInput {
+            display: none;
+        }
     </style>
   </head>
   <body>
-	  <div style="
-    background-color:#f1f1f1;
-    text-align: center;
-    padding: 40px;
-    ">
-      <img src= 'https://kangwenchang.com/logo.png' alt = "kwc" width:"80px" height="80px">
+    <div class="title">
+        <h1>TFLS 语法纠正程序</h1>
     </div>
-    <div style = "
-      max-width: 700px;
-      margin: 30px auto;
-      padding: 15px;
-      line-height: 1.7;
-      text-align: center;
-      
-    ">
-      <p>这是一个语法检测器</p>
-      <p>你可以粘贴文本来进行检测</p>
-      <p>等待检测完成后你可以看到错误的地方</p>
-      <p>通过学习相应的语法知识点来修改错误</p>
-      <p>直到所有错误更正后，你就提升了自己的写作水平！</p>
+    <div class="input">
+        <textarea class="inputText" placeholder="请粘贴需要检测的文本，或点击「上传附件」选择文件"></textarea>
     </div>
-    <div style="
-    background-color:#59e7c4ad;
-    text-align: center;
-    padding: 40px;
-    font-size: 12px;
-    ">
-    <p>检测结果仅供参考</p>
-    <a href="https://www.bilibili.com">联系我们</a>
+    <div class="output">
+        <textarea class="outputText" readonly placeholder="语法检查结果将显示在这里..."></textarea>
     </div>
+    <div class="button-group">
+        <button id="checkBtn" class="btn">语法检查</button>
+        <button id="uploadBtn" class="btn">上传附件</button>
+        <button id="resetBtn" class="btn">重置</button>
+    </div>
+    <div class="hint-text">
+        提示文字：<br>
+        点击「语法检查」按钮，分析语法问题，并给出修改建议。
+    </div>
+    <div class="result-note">
+        检测结果仅供参考
+    </div>
+    <div class="footer-links">
+        <a href="#" class="footer-link">使用帮助</a>
+        <a href="#" class="footer-link">常见问题</a>
+        <a href="#" class="footer-link">关于我们</a>
+        <a href="#" class="footer-link">反馈问题</a>
+        <!-- 必须添加的 LanguageTool 归属链接，无 nofollow -->
+    </div>
+
+    <div class="credit-links">
+        <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
+    </div>
+    <!-- 隐藏的文件选择器 -->
+    <input type="file" id="fileInput" accept=".txt,.md,.text/plain">
+
+    <script>
+        // ---------- DOM 元素 ----------
+        const inputTextarea = document.querySelector('.inputText');
+        const outputTextarea = document.querySelector('.outputText');
+        const checkBtn = document.getElementById('checkBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        // API 配置
+        const API_URL = 'https://api.languagetool.org/v2/check';
+        const MAX_BYTES = 20000;  // 20KB 限制
+
+        // ---------- 辅助函数 ----------
+        // 计算字符串字节数 (UTF-8)
+        function getByteLength(str) {
+            return new Blob([str]).size;
+        }
+
+        // 格式化 API 返回结果为易读文本
+        function formatResult(data, originalText) {
+            if (!data.matches || data.matches.length === 0) {
+                return "暂时未发现语法或拼写问题\n\n（基于 LanguageTool 规则检测）";
+            }
+
+            let result = `共发现 ${data.matches.length} 处问题：\n\n`;
+            data.matches.forEach((match, idx) => {
+                // 提取错误片段上下文
+                const context = match.context?.text || '';
+                const offset = match.context?.offset || 0;
+                const length = match.context?.length || 0;
+                const errorWord = context.substring(offset, offset + length);
+                
+                result += `${idx+1}. 问题位置: “${errorWord || '未知'}”\n`;
+                result += `   说明: ${match.message}\n`;
+                if (match.replacements && match.replacements.length > 0) {
+                    const suggestions = match.replacements.slice(0, 5).map(r => r.value).join('、');
+                    result += `   建议: ${suggestions}\n`;
+                }
+                if (match.rule?.category?.name) {
+                    result += `   类型: ${match.rule.category.name}\n`;
+                }
+                result += `   ---------------------------------\n`;
+            });
+            result += `\n提示：检测结果由 LanguageTool 提供，仅作参考。`;
+            return result;
+        }
+
+        // 显示错误信息到输出框
+        function showError(msg) {
+            outputTextarea.value = `检测失败：\n${msg}\n\n请稍后重试或检查网络连接。`;
+        }
+
+        // 更新按钮状态（根据输入框是否有内容）
+        function updateCheckButtonState() {
+            const hasText = inputTextarea.value.trim().length > 0;
+            if (hasText) {
+                checkBtn.disabled = false;
+                checkBtn.classList.remove('button-disabled');
+                checkBtn.classList.add('button-enabled');
+            } else {
+                checkBtn.disabled = true;
+                checkBtn.classList.remove('button-enabled');
+                checkBtn.classList.add('button-disabled');
+            }
+        }
+
+        // 重置所有内容
+        function resetAll() {
+            inputTextarea.value = '';
+            outputTextarea.value = '';
+            updateCheckButtonState();
+        }
+
+        // 调用 LanguageTool API
+        async function checkGrammar() {
+            const text = inputTextarea.value;
+            if (!text.trim()) {
+                showError("请输入待检测的文本");
+                return;
+            }
+
+            // 检查文本大小
+            const byteSize = getByteLength(text);
+            if (byteSize > MAX_BYTES) {
+                showError(`文本过大 (${byteSize} 字节)，限制单次请求 ≤ 20KB。请减少文本长度后重试。`);
+                return;
+            }
+
+            // 禁用按钮并显示加载状态
+            checkBtn.disabled = true;
+            const originalBtnText = checkBtn.innerText;
+            checkBtn.innerText = '检查中...';
+            outputTextarea.value = '请稍候...';
+
+            try {
+                // 构建 POST 参数
+                const params = new URLSearchParams();
+                params.append('text', text);
+                params.append('language', 'auto');  // 自动检测语言
+                params.append('enabledOnly', 'false');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params,
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `HTTP ${response.status}`;
+                    try {
+                        const errData = await response.json();
+                        errorMsg = errData.message || JSON.stringify(errData);
+                    } catch(e) {}
+                    throw new Error(`API 响应失败: ${errorMsg}`);
+                }
+
+                const data = await response.json();
+                const formatted = formatResult(data, text);
+                outputTextarea.value = formatted;
+            } catch (err) {
+                console.error('API 调用错误:', err);
+                showError(err.message || '网络异常，请稍后重试');
+            } finally {
+                // 恢复按钮状态
+                checkBtn.innerText = originalBtnText;
+                updateCheckButtonState(); // 重新根据输入内容决定是否启用
+            }
+        }
+
+        // 处理文件上传
+        function triggerFileUpload() {
+            fileInput.click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 仅限文本文件
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                inputTextarea.value = content;
+                updateCheckButtonState();
+                // 可选：自动清空输出框，等待新检查
+                outputTextarea.value = '';
+            };
+            reader.onerror = function() {
+                showError("文件读取失败，请重试");
+            };
+            reader.readAsText(file, 'UTF-8');
+            // 清空 input 值，以便下次选择同一文件也能触发
+            fileInput.value = '';
+        }
+
+        // ---------- 事件绑定 ----------
+        checkBtn.addEventListener('click', checkGrammar);
+        uploadBtn.addEventListener('click', triggerFileUpload);
+        resetBtn.addEventListener('click', resetAll);
+        inputTextarea.addEventListener('input', updateCheckButtonState);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // 初始化按钮状态
+        updateCheckButtonState();
+
+        // 可选：快捷键 Ctrl+Enter 快速检查
+        inputTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (!checkBtn.disabled) {
+                    checkGrammar();
+                }
+            }
+        });
+    </script>
   </body>
 </html>
