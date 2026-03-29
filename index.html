@@ -1,46 +1,81 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>神秘语法检测器</title>
     <style>
+        /* ========== 模块1: 全局样式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             background-color: #d2efff;
             font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
-        .title{
+
+        /* 主内容区域，占据剩余空间 */
+        .main-content {
+            flex: 1;
+            padding-bottom: 20px;
+        }
+
+        .title {
             text-align: center;
-            transform: translateY(18px);
+            margin: 40px 0 30px 0;
         }
-        .input{
+
+        /* ========== 模块2: 输入输出左右布局 ========== */
+        .content-wrapper {
+            position: relative;
+            min-height: 450px;
+            margin-bottom: 30px;
+        }
+
+        .input-container {
             position: absolute;
-            top:15%;
+            top: 0;
             left: 5%;
+            width: 625px;
+
         }
-        .inputText{
+
+        .output {
+            position: absolute;
+            top: 0;
+            right: 5%;
+            width: 640px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .inputText {
             background-color: #ffffff;
-            width: 580px;
-            height: 300px;
+            width: 100%;
+            height: 350px;
             border: 3px solid #5ce1e6;
             border-radius: 10px;
             padding: 20px;
             font-family: "Arial";
             font-size: medium;
             resize: none;
+            position: relative;
+            z-index: 1;
         }
-        textarea:focus {
-            outline: none;
-        }
-        .output{
-            position: absolute;
-            top:15%;
-            right: 5%;
-        }
-        .outputText{
+
+        .outputText {
             background-color: #c2dcff;
-            width: 595px;
-            height: 400px;
+            width: 100%;
+            height: 450px;
             padding: 20px;
             border: 3px solid #d9d9d9;
             border-radius: 10px;
@@ -50,7 +85,68 @@
             resize: none;
             white-space: pre-wrap;
             line-height: 1.5;
+            overflow-y: auto;
         }
+
+        textarea:focus {
+            outline: none;
+        }
+
+        /* ========== 模块3: 高亮覆盖层样式 ========== */
+        .highlight-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            pointer-events: none;
+            font-family: "Arial";
+            font-size: medium;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: auto;
+            color: transparent;
+            background: transparent;
+            z-index: 2;
+            border: 3px solid transparent;
+            border-radius: 10px;
+        }
+
+        .highlight-overlay mark {
+            background-color: rgba(255, 200, 100, 0.4);
+            border-radius: 2px;
+            color: transparent;
+            pointer-events: none;
+        }
+
+        .highlight-overlay mark.error-highlight {
+            background-color: rgba(59, 232, 255, 0.3);
+            border-bottom: 2px solid #57d1ea;
+        }
+
+        .highlight-overlay::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+
+
+
+        /* ========== 模块4: 可点击链接样式 ========== */
+        .issue-type-link {
+            color: #0078d7;
+            text-decoration: none;
+            cursor: pointer;
+            border-bottom: 1px dashed #0078d7;
+        }
+
+        .issue-type-link:hover {
+            color: #0056b3;
+            border-bottom-color: #0056b3;
+        }
+
+        /* ========== 模块5: 按钮组样式 ========== */
         .button-group {
             position: absolute;
             top: 480px;
@@ -58,6 +154,7 @@
             display: flex;
             gap: 20px;
         }
+
         .btn {
             background-color: #0078d7;
             color: white;
@@ -69,40 +166,121 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
         .button-disabled {
             background-color: #707070;
             cursor: not-allowed;
             opacity: 0.6;
         }
+
+        .button-disabled:hover {
+            background-color: #707070;
+        }
+
         .button-enabled {
             background-color: #0078d7;
             cursor: pointer;
             opacity: 1;
         }
+
+        /* ========== 模块6: 提示文本样式 ========== */
         .hint-text {
             position: absolute;
-            top: 540px;
+            top: 550px;
             left: 75px;
             font-size: 16px;
             color: #666;
         }
+
         .result-note {
             position: absolute;
             top: 500px;
             right: 100px;
             font-size: 16px;
             color: #333;
-            margin-right: 5px;
         }
-        .footer-links {
-            margin-top: 5px;
-            position: absolute;
-            top: 620px;
-            right: 80px;
+
+        /* ========== 模块7: 知识卡片样式 ========== */
+        .knowledge-cards {
             display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 20px;
-            font-size: 16px;
+            width: 100%;
+            max-width: 1500px;
+            margin: 80px auto 20px auto;
+            padding: 0 20px;
         }
+
+        .knowledge-card {
+            background: white;
+            border-radius: 12px;
+            border: 3px solid #a4dffe;
+            padding: 20px;
+            width: 100%;
+            max-width: 1290px;
+            scroll-margin-top: 20px;
+            margin-top: 40px;
+        }
+
+
+        .knowledge-card h3 {
+            margin: 0 0 10px 0;
+            color: #0078d7;
+            font-size: 18px;
+        }
+
+        .knowledge-card .card-type {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #0078d7;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .knowledge-card .card-content {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .knowledge-card .example {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .knowledge-card.highlight-card {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            box-shadow: 0 4px 16px rgba(255,152,0,0.3);
+        }
+
+        /* ========== 模块8: 页脚样式 ========== */
+        .bottom-page {
+            margin-top: auto;
+            padding: 20px;
+            background: transparent;
+            border-top: 2px solid #c2e4fa;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
         .footer-link {
             color: #333;
             text-decoration: none;
@@ -110,27 +288,33 @@
             padding: 5px 10px;
             border-radius: 4px;
         }
+
         .footer-link:hover {
             background: #8fc9ff;
         }
-        .credit-links{
-            margin-top: 5px;
-            position: absolute;
-            top: 620px;
-            left: 75px;
+
+        .credit-links {
             display: flex;
-            gap: 20px;
-            font-size: 16px;
+            justify-content: center;
         }
-        .credit-link{
-            color: rgb(100, 146, 193)
+
+        .credit-link {
+            color: rgb(100, 146, 193);
+            text-decoration: none;
         }
+
+        .credit-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== 模块9: 其他样式 ========== */
         .loading-text {
             font-size: 14px;
             color: #0078d7;
             margin-left: 15px;
             display: inline-block;
         }
+
         .error-text {
             color: #d32f2f;
             background: #ffebee;
@@ -138,102 +322,542 @@
             border-radius: 8px;
             margin-top: 10px;
         }
-        /* 文件上传隐藏域 */
+
         #fileInput {
             display: none;
         }
+
+        /* 响应式布局 */
+        @media (max-width: 1300px) {
+            .input-container, .output {
+                width: 45%;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .content-wrapper {
+                position: relative;
+                min-height: auto;
+            }
+            
+            .input-container, .output {
+                position: relative;
+                width: 90%;
+                left: auto;
+                right: auto;
+                margin: 10px auto;
+            }
+            
+            .button-group, .hint-text, .result-note {
+                position: relative;
+                top: auto;
+                left: auto;
+                right: auto;
+                margin: 20px auto;
+                text-align: center;
+                display: flex;
+                justify-content: center;
+            }
+            
+            .hint-text {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .result-note {
+                margin-top: -10px;
+            }
+        }
     </style>
-  </head>
-  <body>
-    <div class="title">
-        <h1>TFLS 语法纠正程序</h1>
+</head>
+<body>
+    <!-- ========== 模块10: HTML 结构 ========== -->
+    <div class="main-content">
+        <div class="title">
+            <h1>TFLS 语法纠正程序</h1>
+        </div>
+        
+        <div class="content-wrapper">
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea class="inputText" id="inputText" placeholder="请粘贴需要检测的文本，或点击「上传附件」选择文件"></textarea>
+                    <div class="highlight-overlay" id="highlightOverlay"></div>
+                </div>
+            </div>
+            
+            <div class="output">
+                <div class="outputText" id="outputText">语法检查结果将显示在这里...</div>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="checkBtn" class="btn">语法检查</button>
+            <button id="uploadBtn" class="btn">上传附件</button>
+            <button id="resetBtn" class="btn">重置</button>
+        </div>
+        
+        <div class="hint-text">
+            点击「语法检查」按钮，分析语法问题，并给出修改建议
+        </div>
+        
+        <div class="result-note">
+            检测结果仅供参考
+        </div>
+        
+        <div class="knowledge-cards" id="knowledgeCards"></div>
     </div>
-    <div class="input">
-        <textarea class="inputText" placeholder="请粘贴需要检测的文本，或点击「上传附件」选择文件"></textarea>
+    
+    <div class="bottom-page">
+        <div class="footer-links">
+            <a href="#" class="footer-link">使用帮助</a>
+            <a href="#" class="footer-link">常见问题</a>
+            <a href="#" class="footer-link">关于我们</a>
+            <a href="#" class="footer-link">反馈问题</a>
+        </div>
+        <div class="credit-links">
+            <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
+        </div>
     </div>
-    <div class="output">
-        <textarea class="outputText" readonly placeholder="语法检查结果将显示在这里..."></textarea>
-    </div>
-    <div class="button-group">
-        <button id="checkBtn" class="btn">语法检查</button>
-        <button id="uploadBtn" class="btn">上传附件</button>
-        <button id="resetBtn" class="btn">重置</button>
-    </div>
-    <div class="hint-text">
-        提示文字：<br>
-        点击「语法检查」按钮，分析语法问题，并给出修改建议。
-    </div>
-    <div class="result-note">
-        检测结果仅供参考
-    </div>
-    <div class="footer-links">
-        <a href="#" class="footer-link">使用帮助</a>
-        <a href="#" class="footer-link">常见问题</a>
-        <a href="#" class="footer-link">关于我们</a>
-        <a href="#" class="footer-link">反馈问题</a>
-        <!-- 必须添加的 LanguageTool 归属链接，无 nofollow -->
-    </div>
-
-    <div class="credit-links">
-        <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
-    </div>
-    <!-- 隐藏的文件选择器 -->
+    
     <input type="file" id="fileInput" accept=".txt,.md,.text/plain">
-
+    
     <script>
-        // ---------- DOM 元素 ----------
-        const inputTextarea = document.querySelector('.inputText');
-        const outputTextarea = document.querySelector('.outputText');
+        // ========== 模块11: DOM 元素引用 ==========
+        const inputTextarea = document.getElementById('inputText');
+        const outputDiv = document.getElementById('outputText');
         const checkBtn = document.getElementById('checkBtn');
         const uploadBtn = document.getElementById('uploadBtn');
         const resetBtn = document.getElementById('resetBtn');
         const fileInput = document.getElementById('fileInput');
+        const highlightOverlay = document.getElementById('highlightOverlay');
+        const knowledgeCardsContainer = document.getElementById('knowledgeCards');
 
-        // API 配置
+        // ========== 模块12: API 配置 ==========
         const API_URL = 'https://api.languagetool.org/v2/check';
-        const MAX_BYTES = 20000;  // 20KB 限制
+        const MAX_BYTES = 20000;
 
-        // ---------- 辅助函数 ----------
-        // 计算字符串字节数 (UTF-8)
+        // ========== 模块13: 全局变量 ==========
+        let lastErrorMatches = [];
+        let generatedCards = [];
+
+        // ========== 模块14: 知识库配置 ==========
+        const knowledgeBase = {
+            '主谓一致问题': {
+                title: '📝 主谓一致',
+                content: '主语和谓语动词必须在人称和数上保持一致。单数主语用单数动词，复数主语用复数动词。',
+                examples: ['✅ He **plays** football every day.', '❌ He play football every day.', '✅ They **play** football every day.', '❌ They plays football every day.']
+            },
+            '冠词使用错误': {
+                title: '🔤 冠词使用 (a/an)',
+                content: '冠词 "a" 用于以辅音音素开头的单词前，"an" 用于以元音音素开头的单词前。注意是发音不是字母。',
+                examples: ['✅ **a** university (/ju:/ 辅音音素)', '✅ **an** hour (元音音素，h不发音)', '✅ **an** apple (元音音素)', '✅ **a** cat (辅音音素)']
+            },
+            '时态问题': {
+                title: '⏰ 时态使用',
+                content: '动词时态需要与时间状语和上下文保持一致。常见时态包括一般现在时、一般过去时、现在完成时等。',
+                examples: ['✅ I **went** to the store yesterday.', '❌ I go to the store yesterday.', '✅ She **has finished** her homework.', '❌ She finish her homework.']
+            },
+            '拼写问题': {
+                title: '✏️ 拼写检查',
+                content: '单词拼写错误可能影响阅读理解。建议使用词典确认正确拼写。',
+                examples: ['✅ receive (不是 recieve)', '✅ separate (不是 seperate)', '✅ definitely (不是 definately)']
+            },
+            '标点符号': {
+                title: '📖 标点符号',
+                content: '正确使用标点符号能使句子结构清晰，表达准确。注意中英文标点的区别。',
+                examples: ['✅ What time is it?', '✅ I like apples, oranges, and bananas.', '❌ I like apples oranges and bananas']
+            },
+            '默认': {
+                title: '💡 语法知识',
+                content: '注意检查句子的语法结构，确保表达清晰准确。可以参考语法书籍或在线资源学习。',
+                examples: ['建议查阅语法参考书', '多读多写提高语感', '注意句子结构的完整性']
+            }
+        };
+
+        // ========== 模块15: 辅助函数 ==========
         function getByteLength(str) {
             return new Blob([str]).size;
         }
 
-        // 格式化 API 返回结果为易读文本
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== 模块16: 高亮功能 ==========
+        function highlightErrorsInText(text, matches) {
+            if (!matches || matches.length === 0) {
+                return escapeHtml(text);
+            }
+
+            const highlights = [];
+            for (const match of matches) {
+                let globalOffset = match.offset;
+                let globalLength = match.length;
+                
+                if (globalOffset !== undefined && globalLength !== undefined && 
+                    globalOffset >= 0 && globalOffset + globalLength <= text.length) {
+                    highlights.push({
+                        start: globalOffset,
+                        end: globalOffset + globalLength,
+                        message: match.message,
+                        replacements: match.replacements || []
+                    });
+                } 
+                else if (match.context?.text) {
+                    const context = match.context.text;
+                    const offset = match.context.offset || 0;
+                    const length = match.context.length || 0;
+                    const searchText = context.substring(offset, offset + length);
+                    
+                    if (searchText && searchText.length > 0) {
+                        let lastIndex = 0;
+                        let foundIndex = text.indexOf(searchText, lastIndex);
+                        while (foundIndex !== -1) {
+                            const isOverlapping = highlights.some(h => 
+                                Math.abs(h.start - foundIndex) < Math.max(5, searchText.length)
+                            );
+                            if (!isOverlapping) {
+                                highlights.push({
+                                    start: foundIndex,
+                                    end: foundIndex + searchText.length,
+                                    message: match.message,
+                                    replacements: match.replacements || []
+                                });
+                                break;
+                            }
+                            lastIndex = foundIndex + 1;
+                            foundIndex = text.indexOf(searchText, lastIndex);
+                        }
+                    }
+                }
+            }
+            
+            highlights.sort((a, b) => a.start - b.start);
+            
+            const mergedHighlights = [];
+            for (const h of highlights) {
+                if (mergedHighlights.length === 0) {
+                    mergedHighlights.push({ ...h });
+                } else {
+                    const last = mergedHighlights[mergedHighlights.length - 1];
+                    if (h.start <= last.end) {
+                        last.end = Math.max(last.end, h.end);
+                        if (last.message !== h.message) {
+                            last.message = last.message + '; ' + h.message;
+                        }
+                    } else {
+                        mergedHighlights.push({ ...h });
+                    }
+                }
+            }
+            
+            let result = '';
+            let currentPos = 0;
+            for (const h of mergedHighlights) {
+                if (h.start > currentPos) {
+                    result += escapeHtml(text.substring(currentPos, h.start));
+                }
+                const errorText = text.substring(h.start, h.end);
+                let titleText = h.message;
+                if (titleText.length > 150) {
+                    titleText = titleText.substring(0, 150) + '...';
+                }
+                if (h.replacements && h.replacements.length > 0) {
+                    const suggestions = h.replacements.slice(0, 3).map(r => r.value).join('、');
+                    titleText += `\n建议修改为: ${suggestions}`;
+                }
+                result += `<mark class="error-highlight" title="${escapeHtml(titleText)}">${escapeHtml(errorText)}</mark>`;
+                currentPos = h.end;
+            }
+            if (currentPos < text.length) {
+                result += escapeHtml(text.substring(currentPos));
+            }
+            
+            return result;
+        }
+
+        function updateHighlight() {
+            if (!lastErrorMatches || lastErrorMatches.length === 0) {
+                highlightOverlay.innerHTML = '';
+                return;
+            }
+            const text = inputTextarea.value;
+            if (!text.trim()) {
+                highlightOverlay.innerHTML = '';
+                return;
+            }
+            const highlightedHtml = highlightErrorsInText(text, lastErrorMatches);
+            highlightOverlay.innerHTML = highlightedHtml;
+            syncScroll();
+        }
+        
+        function syncScroll() {
+            highlightOverlay.scrollTop = inputTextarea.scrollTop;
+            highlightOverlay.scrollLeft = inputTextarea.scrollLeft;
+        }
+        
+        function syncHighlightContent() {
+            const text = inputTextarea.value;
+            if (!text.trim() || !lastErrorMatches || lastErrorMatches.length === 0) {
+                highlightOverlay.innerHTML = '';
+                return;
+            }
+            const highlightedHtml = highlightErrorsInText(text, lastErrorMatches);
+            highlightOverlay.innerHTML = highlightedHtml;
+        }
+        
+        function initHighlightOverlay() {
+            const textareaStyle = window.getComputedStyle(inputTextarea);
+            highlightOverlay.style.fontFamily = textareaStyle.fontFamily;
+            highlightOverlay.style.fontSize = textareaStyle.fontSize;
+            highlightOverlay.style.lineHeight = textareaStyle.lineHeight;
+            highlightOverlay.style.fontWeight = textareaStyle.fontWeight;
+            highlightOverlay.style.letterSpacing = textareaStyle.letterSpacing;
+            highlightOverlay.style.wordSpacing = textareaStyle.wordSpacing;
+            highlightOverlay.style.padding = textareaStyle.padding;
+            highlightOverlay.style.border = '3px solid transparent';
+            highlightOverlay.style.borderRadius = textareaStyle.borderRadius;
+            highlightOverlay.style.boxSizing = textareaStyle.boxSizing;
+            highlightOverlay.style.whiteSpace = textareaStyle.whiteSpace;
+            highlightOverlay.style.wordWrap = textareaStyle.wordWrap;
+            highlightOverlay.style.overflow = 'auto';
+            highlightOverlay.style.position = 'absolute';
+            highlightOverlay.style.top = '0';
+            highlightOverlay.style.left = '0';
+        }
+
+        // ========== 模块17: 知识卡片功能 ==========
+        function getKnowledgeForIssueType(issueType) {
+            if (issueType.includes('主谓一致')) return knowledgeBase['主谓一致问题'];
+            if (issueType.includes('冠词')) return knowledgeBase['冠词使用错误'];
+            if (issueType.includes('时态') || issueType.includes('Tense')) return knowledgeBase['时态问题'];
+            if (issueType.includes('拼写') || issueType.includes('Spelling')) return knowledgeBase['拼写问题'];
+            if (issueType.includes('标点') || issueType.includes('Punctuation')) return knowledgeBase['标点符号'];
+            return knowledgeBase['默认'];
+        }
+
+        function generateKnowledgeCards(issueTypes) {
+            const uniqueTypes = [...new Set(issueTypes)];
+            let cardsHtml = '';
+            
+            uniqueTypes.forEach((type, index) => {
+                const knowledge = getKnowledgeForIssueType(type);
+                const cardId = `card-${index}`;
+                
+                cardsHtml += `
+                    <div class="knowledge-card" id="${cardId}" data-card-type="${type}">
+                        <div class="card-type">${escapeHtml(type)}</div>
+                        <h3>${knowledge.title}</h3>
+                        <div class="card-content">${knowledge.content}</div>
+                        <div class="example">
+                            ${knowledge.examples.map(ex => ex.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            knowledgeCardsContainer.innerHTML = cardsHtml;
+            generatedCards = uniqueTypes.map((type, index) => ({
+                type: type,
+                elementId: `card-${index}`
+            }));
+        }
+
+        function clearKnowledgeCards() {
+            knowledgeCardsContainer.innerHTML = '';
+            generatedCards = [];
+        }
+
+        function scrollToCard(issueType) {
+            const cards = document.querySelectorAll('.knowledge-card');
+            let targetCard = null;
+            
+            for (const card of cards) {
+                const cardType = card.getAttribute('data-card-type');
+                if (cardType === issueType) {
+                    targetCard = card;
+                    break;
+                }
+            }
+            
+            if (targetCard) {
+                document.querySelectorAll('.knowledge-card').forEach(card => {
+                    card.classList.remove('highlight-card');
+                });
+                targetCard.classList.add('highlight-card');
+                targetCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
+                setTimeout(() => {
+                    targetCard.classList.remove('highlight-card');
+                }, 3000);
+            } else {
+                const tempMsg = document.createElement('div');
+                tempMsg.textContent = `未找到"${issueType}"对应的知识卡片`;
+                tempMsg.style.position = 'fixed';
+                tempMsg.style.bottom = '20px';
+                tempMsg.style.left = '50%';
+                tempMsg.style.transform = 'translateX(-50%)';
+                tempMsg.style.backgroundColor = '#ff9800';
+                tempMsg.style.color = 'white';
+                tempMsg.style.padding = '8px 16px';
+                tempMsg.style.borderRadius = '8px';
+                tempMsg.style.zIndex = '1000';
+                tempMsg.style.fontSize = '14px';
+                document.body.appendChild(tempMsg);
+                setTimeout(() => tempMsg.remove(), 2000);
+            }
+        }
+
+        // ========== 模块18: 问题类型点击处理 ==========
+        function handleIssueTypeClick(issueIndex, issueType) {
+            scrollToCard(issueType);
+            
+            if (lastErrorMatches && lastErrorMatches[issueIndex]) {
+                const match = lastErrorMatches[issueIndex];
+                let errorOffset = match.offset;
+                if (errorOffset !== undefined) {
+                    const textBeforeError = inputTextarea.value.substring(0, errorOffset);
+                    const lines = textBeforeError.split('\n');
+                    const lineNumber = lines.length;
+                    inputTextarea.focus();
+                    
+                    const tempMsg = document.createElement('div');
+                    tempMsg.textContent = `已定位到问题 ${parseInt(issueIndex) + 1}（第 ${lineNumber} 行附近）`;
+                    tempMsg.style.position = 'fixed';
+                    tempMsg.style.bottom = '20px';
+                    tempMsg.style.left = '50%';
+                    tempMsg.style.transform = 'translateX(-50%)';
+                    tempMsg.style.backgroundColor = '#0078d7';
+                    tempMsg.style.color = 'white';
+                    tempMsg.style.padding = '8px 16px';
+                    tempMsg.style.borderRadius = '8px';
+                    tempMsg.style.zIndex = '1000';
+                    tempMsg.style.fontSize = '14px';
+                    document.body.appendChild(tempMsg);
+                    setTimeout(() => tempMsg.remove(), 2000);
+                }
+            }
+        }
+
+        function setupOutputLinks() {
+            outputDiv.addEventListener('click', function(e) {
+                const link = e.target.closest('.issue-type-link');
+                if (link && link.dataset.issueIndex !== undefined) {
+                    e.preventDefault();
+                    const issueIndex = parseInt(link.dataset.issueIndex);
+                    const issueType = link.dataset.issueType;
+                    handleIssueTypeClick(issueIndex, issueType);
+                }
+            });
+        }
+
+        // ========== 模块19: 问题类型检测 ==========
+        const subjectVerbAgreementPatterns = [
+            /pronoun ['‘](I|He|She|It|We|You|They)['’] must be used with/i,
+            /pronoun ['‘](I|He|She|It|We|You|They)['’] requires? a/i,
+            /pronoun ['‘](I|He|She|It|We|You|They)['’] is usually used with/i,
+            /third-person (singular )?verb/i,
+            /third-person plural verb/i,
+            /non-third-person form of a verb/i,
+            /subject-verb agreement/i,
+            /agreement: (subject|verb)/i,
+            /verb.*(singular|plural).*subject/i,
+            /(singular|plural) subject.*(singular|plural) verb/i,
+            /(doesn't|don't|does not|do not).*agree/i,
+            /agree.*(in number|with subject)/i
+        ];
+
+        function isSubjectVerbAgreement(message) {
+            return subjectVerbAgreementPatterns.some(pattern => pattern.test(message));
+        }
+
+        const articleUsagePatterns = [
+            /use [“"']an[“"'] instead of [“"']a[“"']/i,
+            /use [“"']a[“"'] instead of [“"']an[“"']/i,
+            /article.*(a|an).*vowel sound/i,
+            /article.*(a|an).*consonant sound/i,
+            /use “an” before a vowel sound/i,
+            /use “a” before a consonant sound/i,
+            /a.*an.*vowel/i,
+            /an.*a.*consonant/i,
+            /indefinite article/i,
+            /article usage/i
+        ];
+
+        function isArticleUsageIssue(message) {
+            return articleUsagePatterns.some(pattern => pattern.test(message));
+        }
+
+        function getIssueType(match, isAgreementIssue, isArticleIssue) {
+            if (isAgreementIssue) return '主谓一致问题';
+            if (isArticleIssue) return '冠词使用错误';
+            if (match.rule?.category?.name) return match.rule.category.name;
+            return '语法问题';
+        }
+
+        // ========== 模块20: 结果格式化 ==========
         function formatResult(data, originalText) {
+            lastErrorMatches = data.matches || [];
+            
             if (!data.matches || data.matches.length === 0) {
-                return "暂时未发现语法或拼写问题\n\n（基于 LanguageTool 规则检测）";
+                clearKnowledgeCards();
+                return "未发现语法或拼写问题\n\n（时态等部分语法问题暂时无法检测）";
             }
 
             let result = `共发现 ${data.matches.length} 处问题：\n\n`;
+            const issueTypesList = [];
+            
             data.matches.forEach((match, idx) => {
-                // 提取错误片段上下文
                 const context = match.context?.text || '';
                 const offset = match.context?.offset || 0;
                 const length = match.context?.length || 0;
                 const errorWord = context.substring(offset, offset + length);
                 
-                result += `${idx+1}. 问题位置: “${errorWord || '未知'}”\n`;
-                result += `   说明: ${match.message}\n`;
+                const isAgreementIssue = isSubjectVerbAgreement(match.message);
+                const isArticleIssue = isArticleUsageIssue(match.message);
+                const issueType = getIssueType(match, isAgreementIssue, isArticleIssue);
+                
+                issueTypesList.push(issueType);
+                
+                result += `${idx+1}. 问题位置: “${escapeHtml(errorWord || '未知')}”\n`;
+                
+                if (isAgreementIssue) {
+                    result += `   说明: 主谓一致问题 - 主语和谓语动词在人称和数上不一致\n`;
+                } else if (isArticleIssue) {
+                    result += `   说明: 冠词使用错误 - 应根据后续单词的发音选择 a 或 an\n`;
+                } else {
+                    result += `   说明: ${escapeHtml(match.message)}\n`;
+                }
+                
                 if (match.replacements && match.replacements.length > 0) {
                     const suggestions = match.replacements.slice(0, 5).map(r => r.value).join('、');
-                    result += `   建议: ${suggestions}\n`;
+                    result += `   建议: ${escapeHtml(suggestions)}\n`;
                 }
-                if (match.rule?.category?.name) {
-                    result += `   类型: ${match.rule.category.name}\n`;
-                }
-                result += `   ---------------------------------\n`;
+                
+                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${idx}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
+                result += `   ───────────────────────────────\n`;
             });
-            result += `\n提示：检测结果由 LanguageTool 提供，仅作参考。`;
+            
+            result += `\n提示：检测结果由 LanguageTool 提供，仅作参考。点击问题类型可查看对应的知识卡片。`;
+            
+            generateKnowledgeCards(issueTypesList);
+            
             return result;
         }
 
-        // 显示错误信息到输出框
+        // ========== 模块21: UI 状态管理 ==========
         function showError(msg) {
-            outputTextarea.value = `检测失败：\n${msg}\n\n请稍后重试或检查网络连接。`;
+            outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}\n\n请稍后重试或检查网络连接。`;
+            lastErrorMatches = [];
+            updateHighlight();
+            clearKnowledgeCards();
         }
 
-        // 更新按钮状态（根据输入框是否有内容）
         function updateCheckButtonState() {
             const hasText = inputTextarea.value.trim().length > 0;
             if (hasText) {
@@ -247,14 +871,16 @@
             }
         }
 
-        // 重置所有内容
         function resetAll() {
             inputTextarea.value = '';
-            outputTextarea.value = '';
+            outputDiv.innerHTML = '语法检查结果将显示在这里...';
+            lastErrorMatches = [];
+            updateHighlight();
             updateCheckButtonState();
+            clearKnowledgeCards();
         }
 
-        // 调用 LanguageTool API
+        // ========== 模块22: API 调用 ==========
         async function checkGrammar() {
             const text = inputTextarea.value;
             if (!text.trim()) {
@@ -262,24 +888,24 @@
                 return;
             }
 
-            // 检查文本大小
             const byteSize = getByteLength(text);
             if (byteSize > MAX_BYTES) {
                 showError(`文本过大 (${byteSize} 字节)，限制单次请求 ≤ 20KB。请减少文本长度后重试。`);
                 return;
             }
 
-            // 禁用按钮并显示加载状态
             checkBtn.disabled = true;
             const originalBtnText = checkBtn.innerText;
             checkBtn.innerText = '检查中...';
-            outputTextarea.value = '请稍候...';
+            outputDiv.innerHTML = '正在分析语法，请稍候...';
+            lastErrorMatches = [];
+            updateHighlight();
+            clearKnowledgeCards();
 
             try {
-                // 构建 POST 参数
                 const params = new URLSearchParams();
                 params.append('text', text);
-                params.append('language', 'auto');  // 自动检测语言
+                params.append('language', 'auto');
                 params.append('enabledOnly', 'false');
 
                 const response = await fetch(API_URL, {
@@ -301,18 +927,20 @@
 
                 const data = await response.json();
                 const formatted = formatResult(data, text);
-                outputTextarea.value = formatted;
+                outputDiv.innerHTML = formatted;
+                
+                setupOutputLinks();
+                updateHighlight();
             } catch (err) {
                 console.error('API 调用错误:', err);
                 showError(err.message || '网络异常，请稍后重试');
             } finally {
-                // 恢复按钮状态
                 checkBtn.innerText = originalBtnText;
-                updateCheckButtonState(); // 重新根据输入内容决定是否启用
+                updateCheckButtonState();
             }
         }
 
-        // 处理文件上传
+        // ========== 模块23: 文件处理 ==========
         function triggerFileUpload() {
             fileInput.click();
         }
@@ -321,34 +949,81 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // 仅限文本文件
+            if (file.size > 5 * 1024 * 1024) {
+                showError("文件过大，请选择小于 5MB 的文本文件");
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const content = e.target.result;
                 inputTextarea.value = content;
+                lastErrorMatches = [];
+                updateHighlight();
                 updateCheckButtonState();
-                // 可选：自动清空输出框，等待新检查
-                outputTextarea.value = '';
+                outputDiv.innerHTML = '语法检查结果将显示在这里...';
+                clearKnowledgeCards();
             };
             reader.onerror = function() {
                 showError("文件读取失败，请重试");
             };
             reader.readAsText(file, 'UTF-8');
-            // 清空 input 值，以便下次选择同一文件也能触发
             fileInput.value = '';
         }
 
-        // ---------- 事件绑定 ----------
+        // ========== 模块24: 事件监听 ==========
+        function handleInputChange() {
+            if (lastErrorMatches.length > 0) {
+                lastErrorMatches = [];
+                updateHighlight();
+                clearKnowledgeCards();
+            }
+            updateCheckButtonState();
+        }
+        
+        function handleScroll() {
+            highlightOverlay.scrollTop = inputTextarea.scrollTop;
+            highlightOverlay.scrollLeft = inputTextarea.scrollLeft;
+        }
+        
+        function handleResize() {
+            if (lastErrorMatches.length > 0) {
+                syncHighlightContent();
+            }
+        }
+        
+        function setupTextareaObserver() {
+            inputTextarea.addEventListener('input', handleInputChange);
+            inputTextarea.addEventListener('scroll', handleScroll);
+        }
+
+        // ========== 模块25: 初始化 ==========
         checkBtn.addEventListener('click', checkGrammar);
         uploadBtn.addEventListener('click', triggerFileUpload);
         resetBtn.addEventListener('click', resetAll);
-        inputTextarea.addEventListener('input', updateCheckButtonState);
+        inputTextarea.addEventListener('input', handleInputChange);
+        inputTextarea.addEventListener('scroll', handleScroll);
         fileInput.addEventListener('change', handleFileSelect);
-
-        // 初始化按钮状态
+        window.addEventListener('resize', handleResize);
+        
+        const resizeObserver = new ResizeObserver(() => {
+            if (lastErrorMatches.length > 0) {
+                syncHighlightContent();
+            }
+        });
+        resizeObserver.observe(inputTextarea);
+        
+        initHighlightOverlay();
         updateCheckButtonState();
-
-        // 可选：快捷键 Ctrl+Enter 快速检查
+        setupTextareaObserver();
+        setupOutputLinks();
+        
+        inputTextarea.addEventListener('focus', () => {
+            if (lastErrorMatches.length > 0) {
+                updateHighlight();
+            }
+        });
+        
         inputTextarea.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -358,5 +1033,5 @@
             }
         });
     </script>
-  </body>
+</body>
 </html>
