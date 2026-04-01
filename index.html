@@ -850,9 +850,18 @@
         }
 
         // ========== 问题类型检测规则 ==========
-        const subjectVerbAgreementPatterns = [/pronoun ['‘](I|He|She|It|We|You|They)['’] must be used with/i, /third-person (singular )?verb/i, /subject-verb agreement/i, /agreement: (subject|verb)/i];
+        const subjectVerbAgreementPatterns = [
+            /pronoun ['‘](I|He|She|It|We|You|They)['’] (is|are|was|were|should be|must be|is usually|is often) used with/i,
+            /third-person (singular )?verb/i,
+            /subject-verb agreement/i,
+            /agreement: (subject|verb)/i
+        ];
         function isSubjectVerbAgreement(msg) { return subjectVerbAgreementPatterns.some(p => p.test(msg)); }
-        const articleUsagePatterns = [/use\W*an\W*instead\W*of\W*a/i, /article.*\b(a|an)\b.*vowel\s*sound/i, /indefinite\s+article/i];
+        const articleUsagePatterns = [
+            /use\W*["'‘“”]?(a|an)["'‘“”]?\W+instead\W+of\W+["'‘“”]?(a|an)["'‘“”]?/i,
+            /article.*\b(a|an)\b.*vowel\s*sound/i,
+            /indefinite\s+article/i
+        ];
         function isArticleUsageIssue(msg) { return articleUsagePatterns.some(p => p.test(msg)); }
         const modalVerbPatterns = [/modal\s+verb.*base\s+form/i, /requires?\s+the\s+base\s+form/i, /after\s+['"]?(must|can|could|may|might|will|would|shall|should)['"]?/i];
         function isModalUsageIssue(msg) { return modalVerbPatterns.some(p => p.test(msg)); }
