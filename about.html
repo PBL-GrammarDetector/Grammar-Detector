@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于我们 - TFLS语法纠正程序</title>
+    <style>
+        body {
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+            background-color: #d2efff;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #5ce1e6;
+            color: #0078d7;
+        }
+        h2 {
+            font-size: 18px;
+            margin: 25px 0 10px 0;
+            color: #0078d7;
+        }
+        p {
+            margin: 10px 0;
+        }
+        ul {
+            margin: 10px 0 10px 25px;
+        }
+        li {
+            margin: 6px 0;
+        }
+        .note {
+            background: #f0f7ff;
+            border-left: 4px solid #0078d7;
+            padding: 12px 16px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #e0e0e0;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #0078d7;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .version {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 关于我们</h1>
+        
+        <p>这个语法检查工具是学校项目做出来的，主要目的是帮大家快速发现英语写作里的语法问题，顺便学点东西。</p>
+        
+        <h2>为什么做这个</h2>
+        <p>在使用语法检测时，我们希望大家能认真理解语法背后的原理，而不是直接替换为给出的修改方案。这样才能学习中提升英语写作水平</p>
+        
+        <h2>怎么做的</h2>
+        <ul>
+            <li><strong>语法检测</strong>：用的是LanguageTool的服务，可惜它的API和官网差距太大了，所以检测效果不太行</li>
+            <li><strong>知识卡片</strong>：自己整理的常见语法点，加上练习题，方便边改边学。</li>
+            <li><strong>网站界面</strong>：基于前端框架，HTML/CSS/JS语言。</li>
+        </ul>
+        
+        <h2>谁在用</h2>
+        <p>主要就是学生、写英语作业的人。反正确实能帮上忙，那就放出来让大家试试。</p>
+        
+        <h2>关于费用</h2>
+        <p>免费。后面应该也会一直免费</p>
+        
+        <div class="note">
+            目前版本(测试阶段仅供参考)：beta-1.0<br>
+            更新日期：2026/4/1<br>
+            代码在 GitHub 上开源，有兴趣可以看看。
+        </div>
+        
+        <h2>联系方式</h2>
+        <p>有问题或者建议可以加微信群，也可以去 GitHub 上提 issue。不保证秒回，但看到会处理。</p>
+        <ul>
+            <li>微信群：扫描这个不存在的二维码……</li>
+            <li>GitHub：<a href="https://github.com/PBL-GrammarDetector/Grammar-Detector" target="_blank" rel="noopener">PBL-GrammarDetector/Grammar-Detector</a></li>
+        </ul>
+        
+        <h2>致谢</h2>
+        <p>感谢LanguageTool提供的语法检测服务，虽然它的API效果不尽人意……也感谢老师给的这个项目机会，边做边学了不少东西。</p>
+        
+        <hr>
+        
+        <p style="font-size: 14px; color: #666; text-align: center;">写于 2026 · 希望能帮到你</p>
+        
+        <a href="#" class="back-link" onclick="window.close(); return false;">← 返回</a>
+    </div>
+    
+    <script>
+        if (document.referrer) {
+            const backLink = document.querySelector('.back-link');
+            backLink.href = document.referrer;
+            backLink.onclick = null;
+        }
+    </script>
+</body>
+</html>
