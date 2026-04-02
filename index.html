@@ -444,10 +444,10 @@
     
     <div class="bottom-page">
         <div class="footer-links">
-            <a href="#" class="footer-link">使用帮助</a>
-            <a href="#" class="footer-link">常见问题</a>
-            <a href="https://github.com/PBL-GrammarDetector/Grammar-Detector" class="footer-link">关于我们</a>
-            <a href="#" class="footer-link">反馈问题</a>
+            <a href="help.html" class="footer-link">使用帮助</a>
+            <a href="help.html" target="_blank" class="footer-link">常见问题</a>
+            <a href="about.html" target="_blank" class="footer-link">关于我们</a>
+            <a href="problem.html" target="_blank" class="footer-link">反馈问题</a>
         </div>
         <div class="credit-links">
             <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
@@ -994,7 +994,7 @@
 
         // 设置placeholder
         if (getEditorText() === '') {
-            inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件');
+            inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
         }
     </script>
 </body>
