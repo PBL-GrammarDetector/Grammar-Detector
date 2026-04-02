@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>使用帮助 - TFLS语法纠正程序</title>
+    <title>问题反馈 - TFLS语法纠正程序</title>
     <style>
         body {
             font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -14,7 +14,7 @@
             color: #333;
         }
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
             background: white;
             padding: 30px 40px;
@@ -33,15 +33,10 @@
             margin: 25px 0 10px 0;
             color: #0078d7;
         }
-        h3 {
-            font-size: 16px;
-            margin: 20px 0 8px 0;
-            color: #555;
-        }
         p {
             margin: 10px 0;
         }
-        ul, ol {
+        ul {
             margin: 10px 0 10px 25px;
         }
         li {
@@ -51,28 +46,8 @@
             background: #f0f7ff;
             border-left: 4px solid #0078d7;
             padding: 12px 16px;
-            margin: 15px 0;
+            margin: 20px 0;
             font-size: 14px;
-        }
-        .shortcut {
-            background: #f5f5f5;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 13px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            text-align: left;
-        }
-        th {
-            background: #f5f5f5;
         }
         hr {
             margin: 30px 0;
@@ -88,83 +63,44 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        .version {
+            font-family: monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📖 使用帮助</h1>
+        <h1>反馈问题</h1>
         
-        <p>这个工具用来检测英语文本的语法问题，顺便学点语法知识。操作很简单，下面过一遍就知道怎么用了。</p>
+        <p>在使用中遇到问题属正常情况，欢迎反馈问题！</p>
         
-        <h2>1. 基本操作</h2>
+        <h2>我可以怎么反馈问题</h2>
         <ul>
-            <li><strong>输入文本</strong>：左边那个大框，直接打字或者粘贴都行。支持 .txt 和 .md 文件上传。</li>
-            <li><strong>开始检测</strong>：点「语法检查」按钮，等几秒钟，右边就会出结果。</li>
-            <li><strong>重置</strong>：点「重置」清空所有内容。</li>
-            <li><strong>上传附件</strong>：如果文本在本地文件里，点这个上传就行。</li>
+            <li>如果想评价这个网站，扫描这个二维码</li>
+            <img src="https://pbl-grammardetector.github.io/Grammar-Detector/img/QR_GrammarCheck_Estimate_FORM.png" alt="二维码图片" width="150px" height="150px">
+            
+            <li>如果遇到的具体的问题，扫描这个二维码</li>
+            <img src="https://pbl-grammardetector.github.io/Grammar-Detector/img/QR_GrammarChecker_Issue_FORM.png" alt="二维码图片" width="150px" height="150px">
+            
+            <li>如果你熟悉Github，还可以在<a href="https://github.com/PBL-GrammarDetector/Grammar-Detector/issues" target="_blank" rel="noopener">Github</a>上提交issue</li>
         </ul>
         
-        <div class="note">
-            💡 快捷键：按 <span class="shortcut">Ctrl+Enter</span>（Mac是 <span class="shortcut">Cmd+Enter</span>）可以直接开始检测，不用每次都去点按钮。
-        </div>
-        
-        <h2>2. 怎么看检测结果</h2>
-        <p>检测完右边会显示几部分内容：</p>
+        <h2>联系方式</h2>
+        <p>想要联系我们可以扫描二维码加微信群，也可以去<a href="https://github.com/PBL-GrammarDetector/Grammar-Detector" target="_blank" rel="noopener">Github</a>上留言</p>
         <ul>
-            <li><strong>写作统计</strong>：总词数、句子数、词汇多样性这些。词汇多样性越高说明用词越丰富，可以参考一下。</li>
-            <li><strong>问题列表</strong>：每个问题会标出位置、错误说明、修改建议。问题类型那里可以点，点完会自动跳到下面的知识卡片。</li>
-            <li><strong>高亮显示</strong>：左边输入框里，有问题的词句会标成蓝色背景，鼠标放上去能看到详细提示。</li>
+            <li>微信群：扫描这个不存在的二维码……</li>
         </ul>
-        
-        <h2>3. 知识卡片和练习题</h2>
-        <p>检测完会根据发现的问题类型，自动生成对应的知识卡片。每个卡片包含：</p>
-        <ul>
-            <li>语法点的简要说明</li>
-            <li>几个正确/错误的例子</li>
-            <li>5道练习题，点「核对答案」会告诉你对错和解析</li>
-        </ul>
-        <p>如果某个语法点不太明白，可以做做练习巩固一下。题目做错了也没关系，看解析就行。</p>
-        
-        <h2>4. 关于上传文件</h2>
-        <ul>
-            <li>支持 .txt、.md 格式，别的格式暂时不行。</li>
-            <li>建议上传小文件，太大可能读不了。</li>
-            <li>上传的文件内容会直接显示在输入框里，然后手动点检查。</li>
-        </ul>
-        
-        <h2>5. 常见问题</h2>
-        
-        <h3>Q: 能检测哪些语法错误？</h3>
-        <p>A: 目前可以检测主谓一致、冠词、拼写、标点、情态动词。注意时态等其他语法问题暂时无法检查</p>
-        
-        <h3>Q: 准确吗？</h3>
-        <p>A: 说实话这个很多语法是查不到的，但是能检测到的一般都准。目前这个网页还处在演示阶段，真想查语法还是建议去LanguageTool官网</p>
-        
-        <h3>Q: 有字数限制吗？</h3>
-        <p>A: 有，一次最多检测 20KB 左右的文本，大概五六千单词。如果文本太长，分几次检就行。</p>
-        
-        <h3>Q: 检测结果能保存吗？</h3>
-        <p>A: 右边的结果可以手动复制保存。目前没有导出功能。</p>
-        
-        <h3>Q: 中英文混着写能检吗？</h3>
-        <p>A: 可以，但只检英文部分，中文不会管。</p>
-        
-        <h2>6. 其他说明</h2>
-        <ul>
-            <li>语法检测用的是 LanguageTool 的服务，联网才能用。</li>
-            <li>代码在 GitHub 上开源，有兴趣可以看看。</li>
-            <li>有什么问题或者建议，可以在「反馈问题」那里说。</li>
-        </ul>
-        
+                
         <hr>
-        
-        <p style="font-size: 14px; color: #666;">祝使用顺利qwq</p>
         
         <a href="#" class="back-link" onclick="window.close(); return false;">← 返回</a>
     </div>
     
     <script>
-        // 如果是从主页面打开的，返回按钮能回到上一页
         if (document.referrer) {
             const backLink = document.querySelector('.back-link');
             backLink.href = document.referrer;
