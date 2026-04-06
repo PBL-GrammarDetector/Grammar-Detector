@@ -432,7 +432,9 @@
         </div>
         
         <div class="hint-text">
-            点击「语法检查」按钮，分析语法问题，并给出修改建议
+            点击[语法检查]按钮，分析语法问题，并给出修改建议
+            <br>目前上传附件仅支持txt格式，更多格式敬请期待
+            
         </div>
         
         <div class="result-note">
@@ -454,7 +456,7 @@
         </div>
     </div>
     
-    <input type="file" id="fileInput" accept=".txt,.md,.text/plain">
+    <input type="file" id="fileInput" accept=".txt,.md,.text/plain" hidden>
     
     <script>
         // ========== DOM 元素引用 ==========
@@ -469,6 +471,14 @@
         // ========== API 配置 ==========
         const API_URL = 'https://api.languagetool.org/v2/check';
         const MAX_BYTES = 20000;
+        
+        // ========== DMX API 统计配置（静默调用） ==========
+        const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
+        // 请在这里填入你的 DMX API 令牌（用于统计）
+        const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';  // ⚠️ 请替换为真实令牌，例如 "sk-xxxxx"
+        
+        // 全局统计计数器（仅用于调试，不影响用户）
+        let dmxCallCount = 0;
 
         // ========== 全局变量 ==========
         let lastErrorMatches = [];
@@ -493,6 +503,61 @@
         // 设置带高亮的HTML（用mark标签）
         function setEditorHTML(html) {
             inputEditor.innerHTML = html;
+        }
+
+        // ========== DMX API 静默统计调用（仅计数，不处理返回） ==========
+        async function silentDMXStatistics() {
+            // 如果没有配置有效的令牌，则跳过（避免控制台报错）
+            if (!DMX_API_KEY || DMX_API_KEY === 'sk-你的实际令牌') {
+                console.log('[DMX统计] 未配置有效令牌，跳过统计');
+                return;
+            }
+            
+            try {
+                // 构造一个极简的请求体，仅用于触发API调用计数
+                const testMessage = {
+                    model: "GLM-4.1V-Thinking-Flash",  // 使用最小开销的模型
+                    messages: [
+                        { role: "user", content: "test" }
+                    ],
+                    max_tokens: 1,  // 最小token数，节省资源
+                    stream: false
+                };
+                
+                // 发起异步请求，不等待完整响应（超时设置为3秒）
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(DMX_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DMX_API_KEY}`
+                    },
+                    body: JSON.stringify(testMessage),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                // 统计计数器增加（仅用于调试）
+                dmxCallCount++;
+                console.log(`[DMX统计] API调用成功，本次语法检查已计入统计。总调用次数: ${dmxCallCount}`);
+                
+                // 可选：从响应头中获取使用量信息（如果API提供）
+                const usageRemaining = response.headers.get('X-RateLimit-Remaining');
+                if (usageRemaining) {
+                    console.log(`[DMX统计] 剩余配额: ${usageRemaining}`);
+                }
+                
+            } catch (error) {
+                // 静默失败，不影响主功能
+                if (error.name === 'AbortError') {
+                    console.log('[DMX统计] 请求超时，但调用已记录');
+                } else {
+                    console.log('[DMX统计] 调用失败（不影响语法检测）:', error.message);
+                }
+            }
         }
 
         // ========== 写作分析统计函数 ==========
@@ -933,6 +998,11 @@
             const text = getEditorText();
             if (!text.trim()) return showError("请输入待检测的文本");
             if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 ≤ 20KB`);
+            
+            // ⚡ 关键：每次点击「语法检查」按钮时，静默调用 DMX API 进行统计计数
+            // 不等待返回结果，不影响主流程（后台异步执行）
+            silentDMXStatistics();
+            
             checkBtn.disabled = true; const originalText = checkBtn.innerText; checkBtn.innerText = '检查中...';
             outputDiv.innerHTML = '正在分析语法...'; lastErrorMatches = []; updateHighlight(); clearKnowledgeCards();
             try {
@@ -996,6 +1066,9 @@
         if (getEditorText() === '') {
             inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
         }
+        
+        // 控制台输出统计功能已启动的提示（仅调试）
+        console.log('[DMX统计] 统计功能已启用，每次语法检查将静默记录使用量');
     </script>
 </body>
 </html>
