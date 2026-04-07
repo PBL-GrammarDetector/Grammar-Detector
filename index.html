@@ -473,9 +473,10 @@
         const MAX_BYTES = 20000;
         
         // ========== DMX API 统计配置（静默调用） ==========
-        const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
+        
+        const DMX_API_URL = '/api/proxy'; 
         // 请在这里填入你的 DMX API 令牌（用于统计）
-        const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';  // ⚠️ 请替换为真实令牌，例如 "sk-xxxxx"
+        //const DMX_API_KEY = 'sk-';  // ⚠️ 请替换为真实令牌，例如 "sk-xxxxx"
         
         // 全局统计计数器（仅用于调试，不影响用户）
         let dmxCallCount = 0;
@@ -532,7 +533,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${DMX_API_KEY}`
                     },
                     body: JSON.stringify(testMessage),
                     signal: controller.signal
