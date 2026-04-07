@@ -508,12 +508,6 @@
 
         // ========== DMX API 静默统计调用（仅计数，不处理返回） ==========
         async function silentDMXStatistics() {
-            // 如果没有配置有效的令牌，则跳过（避免控制台报错）
-            if (!DMX_API_KEY || DMX_API_KEY === 'sk-你的实际令牌') {
-                console.log('[DMX统计] 未配置有效令牌，跳过统计');
-                return;
-            }
-            
             try {
                 // 构造一个极简的请求体，仅用于触发API调用计数
                 const testMessage = {
