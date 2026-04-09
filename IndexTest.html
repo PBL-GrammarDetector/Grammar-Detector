@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes" />
+    <title>神秘语法检测器</title>
+    <style>
+        /* ========== 模块1: 全局样式 ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #d2efff;
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            flex: 1;
+            padding-bottom: 20px;
+        }
+
+        .title {
+            text-align: center;
+            margin: 20px 0 20px 0;
+        }
+        
+        .title h1 {
+            font-size: 1.8rem;
+        }
+
+        /* ========== 模块2: 输入输出布局（响应式） ========== */
+        .content-wrapper {
+            position: relative;
+            min-height: auto;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 0 16px;
+        }
+
+        .input-container {
+            width: 100%;
+        }
+
+        .output {
+            width: 100%;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        /* 可编辑div输入框 */
+        .inputEditor {
+            background-color: #ffffff;
+            width: 100%;
+            min-height: 280px;
+            border: 3px solid #5ce1e6;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Arial", sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            overflow-y: auto;
+            position: relative;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            outline: none;
+            color: #000000;
+            transition: all 0.2s;
+        }
+
+        .inputEditor:focus {
+            outline: none;
+            border-color: #3bc0c6;
+        }
+
+        /* 拖拽悬停效果（仅电脑） */
+        .inputEditor.drag-over {
+            border-color: #ff9800;
+            background-color: #fff8e7;
+            box-shadow: 0 0 0 3px rgba(255,152,0,0.2);
+        }
+
+        .inputEditor[contenteditable="true"]:empty:before {
+            content: attr(data-placeholder);
+            color: #999;
+        }
+
+        /* 高亮标记样式 */
+        .inputEditor mark {
+            background-color: rgba(59, 232, 255, 0.4);
+            border-bottom: 2px solid #57d1ea;
+            color: inherit;
+            padding: 0;
+            margin: 0;
+            border-radius: 2px;
+        }
+
+        .outputText {
+            background-color: #c2dcff;
+            width: 100%;
+            min-height: 280px;
+            padding: 16px;
+            border: 3px solid #d9d9d9;
+            border-radius: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, "Arial", sans-serif;
+            font-size: 14px;
+            color: #333;
+            resize: none;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            overflow-y: auto;
+        }
+
+        textarea:focus {
+            outline: none;
+        }
+
+        /* ========== 模块3: 按钮组样式（手机优化） ========== */
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            padding: 16px;
+            margin: 0 auto;
+        }
+
+        .btn {
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 100px;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+            background-color: #0056b3;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .button-disabled {
+            background-color: #707070;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .button-disabled:active {
+            transform: none;
+        }
+
+        .button-enabled {
+            background-color: #0078d7;
+            cursor: pointer;
+            opacity: 1;
+        }
+        
+        /* 拍照按钮特殊样式 */
+        .btn-camera {
+            background-color: #ff9800;
+        }
+        
+        .btn-camera:active {
+            background-color: #e68900;
+        }
+
+        /* ========== 模块4: 提示文本样式 ========== */
+        .hint-text {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            padding: 8px 16px;
+            margin-top: 0;
+        }
+
+        .result-note {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            padding: 4px 16px;
+        }
+
+        /* ========== 模块5: 知识卡片样式 ========== */
+        .knowledge-cards {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1500px;
+            margin: 40px auto 20px auto;
+            padding: 0 16px;
+        }
+
+        .knowledge-card {
+            background: white;
+            border-radius: 12px;
+            border: 3px solid #a4dffe;
+            padding: 16px;
+            width: 100%;
+            scroll-margin-top: 20px;
+        }
+
+        .knowledge-card h3 {
+            margin: 0 0 8px 0;
+            color: #0078d7;
+            font-size: 18px;
+        }
+
+        .knowledge-card .card-type {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #0078d7;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .knowledge-card .card-content {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .knowledge-card .example {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        /* 练习题样式 */
+        .exercise-section {
+            margin-top: 16px;
+            background: #f9fafc;
+            border-radius: 12px;
+            padding: 12px;
+            border-left: 4px solid #0078d7;
+        }
+
+        .exercise-title {
+            font-weight: bold;
+            color: #0078d7;
+            margin-bottom: 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .exercise-item {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .exercise-question {
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        .exercise-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .exercise-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 30px;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .exercise-option input {
+            margin: 0;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .exercise-feedback {
+            font-size: 13px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #f8fafc;
+            display: none;
+        }
+
+        .exercise-feedback.correct-feedback {
+            background: #e0f2e7;
+            color: #166534;
+            display: block;
+            border-left: 3px solid #22c55e;
+        }
+
+        .exercise-feedback.wrong-feedback {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+            border-left: 3px solid #ef4444;
+        }
+
+        .check-answer-btn {
+            background: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: 0.2s;
+            touch-action: manipulation;
+        }
+
+        .check-answer-btn:active {
+            transform: scale(0.96);
+        }
+
+        .knowledge-card.highlight-card {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            box-shadow: 0 4px 16px rgba(255,152,0,0.3);
+        }
+
+        /* 上传进度提示 */
+        .upload-progress {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 14px;
+            z-index: 1000;
+            pointer-events: none;
+            white-space: nowrap;
+            max-width: 90%;
+            white-space: normal;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* ========== 模块6: 页脚样式 ========== */
+        .bottom-page {
+            margin-top: auto;
+            padding: 20px 16px;
+            background: transparent;
+            border-top: 2px solid #c2e4fa;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: #333;
+            text-decoration: none;
+            background: #b0d9ff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .credit-links {
+            display: flex;
+            justify-content: center;
+        }
+
+        .credit-link {
+            color: rgb(100, 146, 193);
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        /* 电脑端优化（屏幕宽度 > 768px） */
+        @media (min-width: 768px) {
+            .content-wrapper {
+                flex-direction: row;
+                gap: 30px;
+                padding: 0 40px;
+            }
+            
+            .input-container, .output {
+                width: calc(50% - 15px);
+            }
+            
+            .inputEditor, .outputText {
+                height: 450px;
+                min-height: 450px;
+            }
+            
+            .button-group {
+                position: static;
+                margin: 20px auto;
+            }
+            
+            .hint-text, .result-note {
+                position: static;
+                text-align: center;
+            }
+        }
+        
+        /* 手机端按钮优化 */
+        @media (max-width: 480px) {
+            .btn {
+                padding: 10px 16px;
+                font-size: 14px;
+                min-width: 80px;
+            }
+            
+            .title h1 {
+                font-size: 1.5rem;
+            }
+            
+            .inputEditor, .outputText {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="title">
+            <h1>📝 TFLS 语法纠正程序</h1>
+        </div>
+        
+        <div class="content-wrapper">
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <div class="inputEditor" id="inputEditor" contenteditable="true" data-placeholder="请粘贴需要检测的文本，或点击下方按钮上传/拍照"></div>
+                </div>
+            </div>
+            <div class="output">
+                <div class="outputText" id="outputText">语法检查结果将显示在这里...</div>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button id="checkBtn" class="btn">🔍 语法检查</button>
+            <button id="cameraBtn" class="btn btn-camera">📷 拍照识别</button>
+            <button id="uploadBtn" class="btn">📁 上传文件</button>
+            <button id="resetBtn" class="btn">🗑️ 重置</button>
+        </div>
+        
+        <div class="hint-text">
+            💡 支持格式：拍照 / 图片 / Word / PDF / 文本文件
+            <br>📱 手机可直接拍照识别作文本
+        </div>
+        
+        <div class="result-note">
+            检测结果仅供参考
+        </div>
+        
+        <div class="knowledge-cards" id="knowledgeCards"></div>
+    </div>
+    
+    <div class="bottom-page">
+        <div class="footer-links">
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html" class="footer-link">使用帮助</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html"  class="footer-link">常见问题</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/about.html"  class="footer-link">关于我们</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/problem.html"  class="footer-link">反馈问题</a>
+        </div>
+        <div class="credit-links">
+            <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
+        </div>
+    </div>
+    
+    <!-- 隐藏的文件上传 input，同时支持拍照和图库 -->
+    <input type="file" id="fileInput" accept=".txt,.docx,.pdf,.jpg,.jpeg,.png,image/*" hidden>
+    
+    <!-- 引入 mammoth.js 用于解析 DOCX -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+    
+    <!-- 引入 pdf.js 用于解析 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+    
+    <script>
+        // ========== DOM 元素引用 ==========
+        const inputEditor = document.getElementById('inputEditor');
+        const outputDiv = document.getElementById('outputText');
+        const checkBtn = document.getElementById('checkBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const fileInput = document.getElementById('fileInput');
+        const knowledgeCardsContainer = document.getElementById('knowledgeCards');
+
+        // ========== API 配置 ==========
+        const API_URL = 'https://api.languagetool.org/v2/check';
+        const MAX_BYTES = 20000;
+        
+        // ========== DMX API 配置（用于图片OCR） ==========
+        const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
+        const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';
+        
+        let dmxCallCount = 0;
+        let lastErrorMatches = [];
+
+        // 显示临时提示
+        function showToast(message, duration = 2500) {
+            let toast = document.querySelector('.upload-progress');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.className = 'upload-progress';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, duration);
+        }
+
+        // 获取编辑器纯文本
+        function getEditorText() {
+            const clone = inputEditor.cloneNode(true);
+            const marks = clone.querySelectorAll('mark');
+            marks.forEach(mark => {
+                const text = document.createTextNode(mark.textContent);
+                mark.parentNode.replaceChild(text, mark);
+            });
+            return clone.innerText || '';
+        }
+
+        function setEditorText(text) {
+            inputEditor.innerText = text;
+            // 触发表单变化检测
+            const event = new Event('input', { bubbles: true });
+            inputEditor.dispatchEvent(event);
+        }
+
+        // ========== PDF 解析 ==========
+        async function parsePdfFile(file) {
+            return new Promise(async (resolve, reject) => {
+                showToast('📄 正在解析 PDF...');
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    const pdf = await loadingTask.promise;
+                    
+                    let fullText = '';
+                    const totalPages = pdf.numPages;
+                    
+                    for (let i = 1; i <= totalPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fullText += pageText + '\n';
+                    }
+                    
+                    if (!fullText || fullText.trim() === '') {
+                        reject(new Error('PDF 中未提取到文字（可能是扫描版）'));
+                    } else {
+                        showToast(`✅ PDF 解析完成，共 ${totalPages} 页`);
+                        resolve(fullText);
+                    }
+                } catch (err) {
+                    reject(new Error('PDF 解析失败: ' + err.message));
+                }
+            });
+        }
+
+        // ========== 图片OCR ==========
+        async function recognizeImageFromFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const base64Data = e.target.result.split(',')[1];
+                    const fileType = file.type === 'image/png' ? 'png' : 'jpeg';
+                    
+                    try {
+                        showToast('🔍 AI 正在识别图片中的文字...');
+                        
+                        const response = await fetch(DMX_API_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${DMX_API_KEY}`
+                            },
+                            body: JSON.stringify({
+                                model: "glm-4.1v-thinking-flash",
+                                messages: [
+                                    {
+                                        role: "user",
+                                        content: [
+                                            {
+                                                type: "image_url",
+                                                image_url: {
+                                                    url: `data:image/${fileType};base64,${base64Data}`
+                                                }
+                                            },
+                                            {
+                                                type: "text",
+                                                text: "请仔细识别这张图片中的所有文字内容，按原文顺序完整输出。如果是手写文字，尽力识别；如果是印刷体，准确提取。只输出识别到的文字，不要添加额外说明。"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                temperature: 0.1
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.error) {
+                            reject(new Error(data.error.message || 'OCR 识别失败'));
+                        } else {
+                            const recognizedText = data.choices[0].message.content;
+                            showToast('✅ 图片识别完成');
+                            resolve(recognizedText);
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = () => reject(new Error('读取图片失败'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ========== 解析 DOCX ==========
+        async function parseDocxFile(file) {
+            return new Promise((resolve, reject) => {
+                showToast('📄 正在解析 Word 文档...');
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                        const text = result.value;
+                        if (!text || text.trim() === '') {
+                            reject(new Error('DOCX 中未提取到文字'));
+                        } else {
+                            showToast('✅ Word 解析完成');
+                            resolve(text);
+                        }
+                    } catch (err) {
+                        reject(new Error('DOCX 解析失败: ' + err.message));
+                    }
+                };
+                reader.onerror = () => reject(new Error('读取 DOCX 失败'));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // ========== 解析 TXT ==========
+        function parseTxtFile(file) {
+            return new Promise((resolve, reject) => {
+                showToast('📝 正在读取文本...');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    showToast('✅ 文本读取完成');
+                    resolve(e.target.result);
+                };
+                reader.onerror = () => reject(new Error('读取文本失败'));
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        // ========== 统一文件处理 ==========
+        async function handleFile(file) {
+            const fileName = file.name.toLowerCase();
+            let extractedText = '';
+            
+            try {
+                if (fileName.endsWith('.txt') || fileName.endsWith('.md')) {
+                    extractedText = await parseTxtFile(file);
+                } 
+                else if (fileName.endsWith('.docx')) {
+                    extractedText = await parseDocxFile(file);
+                }
+                else if (fileName.endsWith('.pdf')) {
+                    extractedText = await parsePdfFile(file);
+                }
+                else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) {
+                    extractedText = await recognizeImageFromFile(file);
+                }
+                else {
+                    throw new Error(`不支持: ${fileName}\n支持: .txt, .docx, .pdf, .jpg, .png`);
+                }
+                
+                if (extractedText && extractedText.trim()) {
+                    setEditorText(extractedText);
+                    lastErrorMatches = [];
+                    updateHighlight();
+                    outputDiv.innerHTML = '语法检查结果将显示在这里...';
+                    clearKnowledgeCards();
+                    updateCheckButtonState();
+                    showToast(`✅ 已加载: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+                } else {
+                    throw new Error('未提取到文字内容');
+                }
+                
+            } catch (err) {
+                console.error('文件处理错误:', err);
+                showToast(`❌ ${err.message}`, 4000);
+                outputDiv.innerHTML = `加载失败：\n${escapeHtml(err.message)}`;
+            }
+            
+            fileInput.value = '';
+        }
+
+        // ========== 拍照功能（手机直接调用摄像头） ==========
+        function takePhoto() {
+            // 创建临时 input，设置 capture 属性
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            // capture="environment" 调用后置摄像头
+            input.capture = 'environment';
+            input.onchange = async (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    await handleFile(e.target.files[0]);
+                }
+            };
+            input.click();
+        }
+
+        // ========== 普通上传（电脑用） ==========
+        function triggerFileUpload() {
+            fileInput.click();
+        }
+
+        // ========== DMX 统计 ==========
+        async function silentDMXStatistics() {
+            if (!DMX_API_KEY || DMX_API_KEY === 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9') {
+                return;
+            }
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                await fetch(DMX_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DMX_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "glm-4.1v-thinking-flash",
+                        messages: [{ role: "user", content: "test" }],
+                        max_tokens: 1
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                dmxCallCount++;
+                console.log(`[DMX统计] 调用次数: ${dmxCallCount}`);
+            } catch (error) {}
+        }
+
+        // ========== 写作分析 ==========
+        function getWritingStats(text) {
+            if (!text || !text.trim()) {
+                return { totalWords: 0, totalChars: 0, sentenceCount: 0, avgSentenceLength: 0, lexicalDiversity: 0, uniqueWordsCount: 0 };
+            }
+            const totalChars = text.replace(/\s/g, '').length;
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+            const totalWords = words.length;
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            const sentenceCount = sentences.length;
+            const avgSentenceLength = sentenceCount > 0 ? (totalWords / sentenceCount).toFixed(2) : 0;
+            const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[^\w]/g, '')));
+            const uniqueWordsCount = uniqueWords.size;
+            const lexicalDiversity = totalWords > 0 ? ((uniqueWordsCount / totalWords) * 100).toFixed(1) : 0;
+            return { totalWords, totalChars, sentenceCount, avgSentenceLength: parseFloat(avgSentenceLength), lexicalDiversity: parseFloat(lexicalDiversity), uniqueWordsCount };
+        }
+        
+        function getStatsText(stats) {
+            return '📊 【写作分析统计】\n' +
+                `   📝 总词数：${stats.totalWords}\n` +
+                `   🔤 字符数：${stats.totalChars}\n` +
+                `   📖 句子数：${stats.sentenceCount}\n` +
+                `   📏 平均句长：${stats.avgSentenceLength} 词/句\n` +
+                `   🌈 词汇多样性：${stats.lexicalDiversity}%\n` +
+                `   ⭐ 不重复词：${stats.uniqueWordsCount}\n\n${'─'.repeat(40)}\n\n`;
+        }
+
+        // ========== 知识库 ==========
+        const knowledgeBase = {
+            '主谓一致问题': { title: '📝 主谓一致', content: '主语和谓语动词必须在人称和数上保持一致。', examples: ['✅ He plays football.', '❌ He play football.'] },
+            '冠词使用错误': { title: '🔤 冠词使用', content: '冠词 "a" 用于辅音音素前，"an" 用于元音音素前。', examples: ['✅ a university', '✅ an hour'] },
+            '时态问题': { title: '⏰ 时态使用', content: '动词时态需要与时间状语和上下文保持一致。', examples: ['✅ I went yesterday.', '❌ I go yesterday.'] },
+            '拼写问题': { title: '✏️ 拼写检查', content: '单词拼写错误可能影响阅读理解。', examples: ['✅ receive', '❌ recieve'] },
+            '标点符号': { title: '📖 标点符号', content: '正确使用标点符号能使句子结构清晰。', examples: ['✅ What time is it?', '❌ What time is it'] },
+            '情态动词使用错误': { title: '📖 情态动词', content: '情态动词后动词应使用原形。', examples: ['✅ He can do it.', '❌ He can does it.'] },
+            '默认': { title: '💡 语法知识', content: '注意检查句子的语法结构，确保表达清晰准确。', examples: ['建议查阅语法参考书', '多读多写提高语感'] }
+        };
+
+        function getKnowledgeForIssueType(issueType) {
+            if (issueType.includes('主谓一致')) return knowledgeBase['主谓一致问题'];
+            if (issueType.includes('冠词')) return knowledgeBase['冠词使用错误'];
+            if (issueType.includes('时态')) return knowledgeBase['时态问题'];
+            if (issueType.includes('拼写')) return knowledgeBase['拼写问题'];
+            if (issueType.includes('标点')) return knowledgeBase['标点符号'];
+            if (issueType.includes('情态')) return knowledgeBase['情态动词使用错误'];
+            return knowledgeBase['默认'];
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function generateKnowledgeCards(issueTypes) {
+            const uniqueTypes = [...new Set(issueTypes)];
+            let cardsHtml = '';
+            uniqueTypes.forEach((type) => {
+                const knowledge = getKnowledgeForIssueType(type);
+                const exampleHtml = knowledge.examples.map(ex => ex.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>');
+                cardsHtml += `
+                    <div class="knowledge-card" data-card-type="${escapeHtml(type)}">
+                        <div class="card-type">${escapeHtml(type)}</div>
+                        <h3>${knowledge.title}</h3>
+                        <div class="card-content">${knowledge.content}</div>
+                        <div class="example">${exampleHtml}</div>
+                    </div>
+                `;
+            });
+            knowledgeCardsContainer.innerHTML = cardsHtml;
+        }
+
+        function clearKnowledgeCards() { knowledgeCardsContainer.innerHTML = ''; }
+
+        function scrollToCard(issueType) {
+            const cards = document.querySelectorAll('.knowledge-card');
+            for (const card of cards) {
+                if (card.getAttribute('data-card-type') === issueType) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    card.classList.add('highlight-card');
+                    setTimeout(() => card.classList.remove('highlight-card'), 2000);
+                    break;
+                }
+            }
+        }
+
+        // ========== 高亮功能 ==========
+        function highlightErrorsInText(text, matches) {
+            if (!matches || matches.length === 0) return escapeHtml(text);
+            const highlights = [];
+            for (const match of matches) {
+                if (match.offset !== undefined && match.length !== undefined && match.offset >= 0 && match.offset + match.length <= text.length) {
+                    highlights.push({ start: match.offset, end: match.offset + match.length, message: match.message });
+                } else if (match.context?.text) {
+                    const ctx = match.context.text;
+                    const off = match.context.offset || 0;
+                    const len = match.context.length || 0;
+                    const searchText = ctx.substring(off, off + len);
+                    if (searchText) {
+                        let idx = text.indexOf(searchText);
+                        if (idx !== -1) highlights.push({ start: idx, end: idx + searchText.length, message: match.message });
+                    }
+                }
+            }
+            highlights.sort((a, b) => a.start - b.start);
+            let result = '', pos = 0;
+            for (const h of highlights) {
+                if (h.start > pos) result += escapeHtml(text.substring(pos, h.start));
+                result += `<mark title="${escapeHtml(h.message)}">${escapeHtml(text.substring(h.start, h.end))}</mark>`;
+                pos = h.end;
+            }
+            if (pos < text.length) result += escapeHtml(text.substring(pos));
+            return result;
+        }
+
+        function updateHighlight() {
+            const text = getEditorText();
+            if (!lastErrorMatches || lastErrorMatches.length === 0 || !text.trim()) {
+                const plainHtml = escapeHtml(text);
+                if (inputEditor.innerHTML !== plainHtml) inputEditor.innerHTML = plainHtml;
+                return;
+            }
+            const highlightedHtml = highlightErrorsInText(text, lastErrorMatches);
+            if (inputEditor.innerHTML !== highlightedHtml) inputEditor.innerHTML = highlightedHtml;
+        }
+
+        // ========== 问题类型检测 ==========
+        function getIssueType(match) {
+            const msg = match.message;
+            if (/subject-verb agreement|agreement: subject/i.test(msg)) return '主谓一致问题';
+            if (/article|indefinite article/i.test(msg)) return '冠词使用错误';
+            if (/tense|past|present|future/i.test(msg)) return '时态问题';
+            if (/spelling/i.test(msg)) return '拼写问题';
+            if (/punctuation/i.test(msg)) return '标点符号';
+            if (/modal verb|base form/i.test(msg)) return '情态动词使用错误';
+            return match.rule?.category?.name || '语法问题';
+        }
+
+        function formatResult(data, originalText) {
+            lastErrorMatches = data.matches || [];
+            const stats = getWritingStats(originalText);
+            let result = getStatsText(stats);
+            if (!data.matches || data.matches.length === 0) {
+                result += "✨ 未发现语法或拼写问题";
+                clearKnowledgeCards();
+                return result;
+            }
+            result += `📋 共发现 ${data.matches.length} 处问题：\n\n`;
+            const issueTypesList = [];
+            data.matches.forEach((match, idx) => {
+                const ctx = match.context?.text || '';
+                const off = match.context?.offset || 0;
+                const len = match.context?.length || 0;
+                const errorWord = ctx.substring(off, off+len);
+                const issueType = getIssueType(match);
+                issueTypesList.push(issueType);
+                result += `${idx+1}. “${escapeHtml(errorWord || '未知')}”\n`;
+                result += `   ${escapeHtml(match.message)}\n`;
+                if (match.replacements?.length) result += `   建议: ${match.replacements.slice(0,3).map(r=>r.value).join('、')}\n`;
+                result += `   <a href="#" class="issue-type-link" data-issue-type="${escapeHtml(issueType)}">📖 ${escapeHtml(issueType)}</a>\n`;
+                result += `   ───────────────────────────────\n`;
+            });
+            result += `\n💡 点击问题类型查看知识卡片`;
+            generateKnowledgeCards(issueTypesList);
+            return result;
+        }
+
+        function setupOutputLinks() {
+            outputDiv.addEventListener('click', (e) => {
+                const link = e.target.closest('.issue-type-link');
+                if (link && link.dataset.issueType) {
+                    e.preventDefault();
+                    scrollToCard(link.dataset.issueType);
+                }
+            });
+        }
+
+        // ========== 语法检查 ==========
+        function showError(msg) { outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}`; lastErrorMatches = []; updateHighlight(); clearKnowledgeCards(); }
+        function updateCheckButtonState() { const has = getEditorText().trim().length > 0; checkBtn.disabled = !has; checkBtn.classList.toggle('button-disabled', !has); checkBtn.classList.toggle('button-enabled', has); }
+        function resetAll() { setEditorText(''); outputDiv.innerHTML = '语法检查结果将显示在这里...'; lastErrorMatches = []; updateHighlight(); updateCheckButtonState(); clearKnowledgeCards(); }
+        
+        function getByteLength(str) { return new Blob([str]).size; }
+        
+        async function checkGrammar() {
+            const text = getEditorText();
+            if (!text.trim()) return showError("请输入待检测的文本");
+            if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 20KB`);
+            
+            silentDMXStatistics();
+            checkBtn.disabled = true;
+            checkBtn.textContent = '检查中...';
+            outputDiv.innerHTML = '正在分析语法...';
+            lastErrorMatches = [];
+            updateHighlight();
+            clearKnowledgeCards();
+            try {
+                const params = new URLSearchParams();
+                params.append('text', text);
+                params.append('language', 'en');
+                params.append('enabledOnly', 'false');
+                const resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
+                if (!resp.ok) throw new Error(`API ${resp.status}`);
+                const data = await resp.json();
+                outputDiv.innerHTML = formatResult(data, text);
+                setupOutputLinks();
+                updateHighlight();
+            } catch (err) {
+                showError(err.message || '网络异常');
+            } finally {
+                checkBtn.textContent = '🔍 语法检查';
+                updateCheckButtonState();
+            }
+        }
+
+        // ========== 拖拽上传（电脑） ==========
+        function setupDragAndDrop() {
+            document.body.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
+            document.body.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); });
+            
+            inputEditor.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                inputEditor.classList.add('drag-over');
+            });
+            inputEditor.addEventListener('dragleave', () => {
+                inputEditor.classList.remove('drag-over');
+            });
+            inputEditor.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                inputEditor.classList.remove('drag-over');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    await handleFile(files[0]);
+                }
+            });
+        }
+
+        // ========== 事件绑定 ==========
+        checkBtn.addEventListener('click', checkGrammar);
+        cameraBtn.addEventListener('click', takePhoto);
+        uploadBtn.addEventListener('click', triggerFileUpload);
+        resetBtn.addEventListener('click', resetAll);
+        fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+        inputEditor.addEventListener('input', () => {
+            if (lastErrorMatches.length) { lastErrorMatches = []; updateHighlight(); clearKnowledgeCards(); }
+            updateCheckButtonState();
+        });
+        
+        inputEditor.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+            document.execCommand('insertText', false, text);
+        });
+
+        // 初始化
+        setupDragAndDrop();
+        updateCheckButtonState();
+        setupOutputLinks();
+        inputEditor.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !checkBtn.disabled) checkGrammar(); });
+        
+        console.log('[系统] 已支持：拍照识别 / 文件上传 / 拖拽上传 / PDF解析');
+    </script>
+</body>
+</html>
