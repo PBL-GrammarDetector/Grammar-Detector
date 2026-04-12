@@ -694,13 +694,13 @@
         }
         
         function getStatsText(stats) {
-            return '📊 【写作分析统计指标】\n' +
-                `   📝 总词数：${stats.totalWords} 词\n` +
-                `   🔤 总字符数（不含空格）：${stats.totalChars} 字符\n` +
-                `   📖 句子数：${stats.sentenceCount} 句\n` +
-                `   📏 平均句长：${stats.avgSentenceLength} 词/句\n` +
-                `   🌈 词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
-                `   ⭐ 不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
+            return ' 【写作分析统计指标】\n' +
+                `    总词数：${stats.totalWords} 词\n` +
+                `    总字符数（不含空格）：${stats.totalChars} 字符\n` +
+                `    句子数：${stats.sentenceCount} 句\n` +
+                `    平均句长：${stats.avgSentenceLength} 词/句\n` +
+                `    词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
+                `    不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
         }
 
         const knowledgeBase = {
@@ -1024,7 +1024,9 @@
             /pronoun ['‘](I|He|She|It|We|You|They)['’] (is|are|was|were|should be|must be|is usually|is often) used with/i,
             /third-person (singular )?verb/i,
             /subject-verb agreement/i,
-            /agreement: (subject|verb)/i
+            /agreement: (subject|verb)/i,
+            /(agreement error)/i
+            
         ];
         function isSubjectVerbAgreement(msg) { return subjectVerbAgreementPatterns.some(p => p.test(msg)); }
         const articleUsagePatterns = [
