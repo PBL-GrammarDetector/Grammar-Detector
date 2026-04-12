@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>神秘语法检测器</title>
     <style>
         /* ========== 模块1: 全局样式 ========== */
@@ -23,26 +23,64 @@
         .main-content {
             flex: 1;
             padding-bottom: 20px;
+            display: flex;
+            flex-direction: column;
         }
 
         .title {
             text-align: center;
-            margin: 20px 0 20px 0;
-        }
-        
-        .title h1 {
-            font-size: 1.8rem;
+            margin: 30px 0 20px 0;
         }
 
-        /* ========== 模块2: 输入输出布局（响应式） ========== */
+        .notification {
+            text-align: center;
+            margin: 0 0 20px 0;
+            padding: 15px 20px;
+            background: rgba(92, 179, 230, 0.15);
+            border-radius: 12px;
+            border-left: 5px solid #5cb8e6;
+            width: 90%;
+            max-width: 1290px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .notification h1 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #5891c0;
+            margin: 0;
+        }
+        .notification a{
+            font-weight: 800;
+            color:#0078d7;
+        }
+
+        /* ========== 模块2: 输入输出左右布局 ========== */
         .content-wrapper {
-            position: relative;
-            min-height: auto;
-            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 5px;
+            padding: 0 5%;
+        }
+
+        /* 左侧列：输入框 + 按钮组 + 提示文本 */
+        .left-column {
+            flex: 1 1 600px;
+            max-width: 625px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            padding: 0 16px;
+        }
+
+        /* 右侧列：输出框 + 结果说明 */
+        .right-column {
+            flex: 1 1 600px;
+            max-width: 640px;
+            display: flex;
+            flex-direction: column;
         }
 
         .input-container {
@@ -62,20 +100,20 @@
         .inputEditor {
             background-color: #ffffff;
             width: 100%;
-            min-height: 280px;
+            height: 350px;
             border: 3px solid #5ce1e6;
             border-radius: 10px;
-            padding: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, "Arial", sans-serif;
-            font-size: 16px;
+            padding: 20px;
+            font-family: "Arial";
+            font-size: medium;
             line-height: 1.5;
             overflow-y: auto;
             position: relative;
+            z-index: 1;
             white-space: pre-wrap;
             word-wrap: break-word;
             outline: none;
             color: #000000;
-            transition: all 0.2s;
         }
 
         .inputEditor:focus {
@@ -83,19 +121,12 @@
             border-color: #3bc0c6;
         }
 
-        /* 拖拽悬停效果（仅电脑） */
-        .inputEditor.drag-over {
-            border-color: #ff9800;
-            background-color: #fff8e7;
-            box-shadow: 0 0 0 3px rgba(255,152,0,0.2);
-        }
-
         .inputEditor[contenteditable="true"]:empty:before {
             content: attr(data-placeholder);
             color: #999;
         }
 
-        /* 高亮标记样式 */
+        /* 高亮标记样式 - 用mark标签实现 */
         .inputEditor mark {
             background-color: rgba(59, 232, 255, 0.4);
             border-bottom: 2px solid #57d1ea;
@@ -108,12 +139,12 @@
         .outputText {
             background-color: #c2dcff;
             width: 100%;
-            min-height: 280px;
-            padding: 16px;
+            height: 450px;
+            padding: 20px;
             border: 3px solid #d9d9d9;
             border-radius: 10px;
-            font-family: -apple-system, BlinkMacSystemFont, "Arial", sans-serif;
-            font-size: 14px;
+            font-family: "Arial";
+            font-size: medium;
             color: #333;
             resize: none;
             white-space: pre-wrap;
@@ -125,33 +156,41 @@
             outline: none;
         }
 
-        /* ========== 模块3: 按钮组样式（手机优化） ========== */
+        /* ========== 模块3: 高亮覆盖层已废弃 ========== */
+        .highlight-overlay {
+            display: none;
+        }
+
+        /* ========== 模块4: 可点击链接样式 ========== */
+        .issue-type-link {
+            color: #0078d7;
+            text-decoration: none;
+            cursor: pointer;
+            border-bottom: 1px dashed #0078d7;
+        }
+
+        .issue-type-link:hover {
+            color: #0056b3;
+            border-bottom-color: #0056b3;
+        }
+
+        /* ========== 模块5: 按钮组样式 ========== */
         .button-group {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 12px;
-            padding: 16px;
-            margin: 0 auto;
+            gap: 20px;
+            margin: 20px 0 5px 0;
         }
 
         .btn {
             background-color: #0078d7;
             color: white;
             border: none;
-            border-radius: 30px;
-            padding: 12px 20px;
-            font-size: 16px;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
-            min-width: 100px;
-            touch-action: manipulation;
-        }
-
-        .btn:active {
-            transform: scale(0.96);
-            background-color: #0056b3;
         }
 
         .btn:hover {
@@ -164,8 +203,8 @@
             opacity: 0.6;
         }
 
-        .button-disabled:active {
-            transform: none;
+        .button-disabled:hover {
+            background-color: #707070;
         }
 
         .button-enabled {
@@ -173,33 +212,22 @@
             cursor: pointer;
             opacity: 1;
         }
-        
-        /* 拍照按钮特殊样式 */
-        .btn-camera {
-            background-color: #ff9800;
-        }
-        
-        .btn-camera:active {
-            background-color: #e68900;
-        }
 
-        /* ========== 模块4: 提示文本样式 ========== */
+        /* ========== 模块6: 提示文本样式 ========== */
         .hint-text {
-            text-align: center;
-            font-size: 14px;
+            margin: 0;
+            font-size: 16px;
             color: #666;
-            padding: 8px 16px;
-            margin-top: 0;
         }
 
         .result-note {
-            text-align: center;
-            font-size: 12px;
-            color: #888;
-            padding: 4px 16px;
+            margin: 10px 0 0 0;
+            text-align: right;
+            font-size: 16px;
+            color: #545454;
         }
 
-        /* ========== 模块5: 知识卡片样式 ========== */
+        /* ========== 模块7: 知识卡片样式 ========== */
         .knowledge-cards {
             display: flex;
             flex-direction: column;
@@ -208,20 +236,21 @@
             width: 100%;
             max-width: 1500px;
             margin: 40px auto 20px auto;
-            padding: 0 16px;
+            padding: 0 20px;
         }
 
         .knowledge-card {
             background: white;
             border-radius: 12px;
             border: 3px solid #a4dffe;
-            padding: 16px;
+            padding: 20px;
             width: 100%;
+            max-width: 1290px;
             scroll-margin-top: 20px;
         }
 
         .knowledge-card h3 {
-            margin: 0 0 8px 0;
+            margin: 0 0 10px 0;
             color: #0078d7;
             font-size: 18px;
         }
@@ -249,15 +278,14 @@
             margin-top: 10px;
             font-family: monospace;
             font-size: 13px;
-            overflow-x: auto;
         }
 
         /* 练习题样式 */
         .exercise-section {
-            margin-top: 16px;
+            margin-top: 20px;
             background: #f9fafc;
             border-radius: 12px;
-            padding: 12px;
+            padding: 16px;
             border-left: 4px solid #0078d7;
         }
 
@@ -265,18 +293,17 @@
             font-weight: bold;
             color: #0078d7;
             margin-bottom: 12px;
-            font-size: 14px;
+            font-size: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
-            flex-wrap: wrap;
         }
 
         .exercise-item {
             background: white;
             border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             border: 1px solid #e2e8f0;
         }
@@ -285,13 +312,12 @@
             font-weight: 500;
             margin-bottom: 10px;
             color: #1e293b;
-            font-size: 14px;
         }
 
         .exercise-options {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 20px;
             margin-bottom: 12px;
         }
 
@@ -301,17 +327,18 @@
             gap: 6px;
             cursor: pointer;
             background: #f1f5f9;
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 30px;
             transition: all 0.2s;
-            font-size: 13px;
+        }
+
+        .exercise-option:hover {
+            background: #e2e8f0;
         }
 
         .exercise-option input {
             margin: 0;
             cursor: pointer;
-            width: 18px;
-            height: 18px;
         }
 
         .exercise-feedback {
@@ -342,16 +369,15 @@
             color: white;
             border: none;
             border-radius: 20px;
-            padding: 6px 14px;
+            padding: 5px 14px;
             font-size: 12px;
             cursor: pointer;
             margin-top: 8px;
             transition: 0.2s;
-            touch-action: manipulation;
         }
 
-        .check-answer-btn:active {
-            transform: scale(0.96);
+        .check-answer-btn:hover {
+            background: #0056b3;
         }
 
         .knowledge-card.highlight-card {
@@ -360,30 +386,10 @@
             box-shadow: 0 4px 16px rgba(255,152,0,0.3);
         }
 
-        /* 上传进度提示 */
-        .upload-progress {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 40px;
-            font-size: 14px;
-            z-index: 1000;
-            pointer-events: none;
-            white-space: nowrap;
-            max-width: 90%;
-            white-space: normal;
-            text-align: center;
-            line-height: 1.4;
-        }
-
-        /* ========== 模块6: 页脚样式 ========== */
+        /* ========== 模块8: 页脚样式 ========== */
         .bottom-page {
             margin-top: auto;
-            padding: 20px 16px;
+            padding: 20px;
             background: transparent;
             border-top: 2px solid #c2e4fa;
         }
@@ -391,7 +397,7 @@
         .footer-links {
             display: flex;
             justify-content: center;
-            gap: 12px;
+            gap: 20px;
             margin-bottom: 10px;
             flex-wrap: wrap;
         }
@@ -400,9 +406,12 @@
             color: #333;
             text-decoration: none;
             background: #b0d9ff;
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 4px;
-            font-size: 12px;
+        }
+
+        .footer-link:hover {
+            background: #8fc9ff;
         }
 
         .credit-links {
@@ -413,86 +422,150 @@
         .credit-link {
             color: rgb(100, 146, 193);
             text-decoration: none;
-            font-size: 12px;
         }
 
-        /* 电脑端优化（屏幕宽度 > 768px） */
-        @media (min-width: 768px) {
+        .credit-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 1300px) {
             .content-wrapper {
-                flex-direction: row;
-                gap: 30px;
-                padding: 0 40px;
+                padding: 0 20px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .title {
+                margin: 20px 0 15px 0;
             }
             
-            .input-container, .output {
-                width: calc(50% - 15px);
+            .notification {
+                width: 95%;
+                margin: 0 auto 15px auto;
+                padding: 12px 15px;
             }
             
-            .inputEditor, .outputText {
-                height: 450px;
-                min-height: 450px;
+            .notification h1 {
+                font-size: 16px;
+                font-weight: 1200;
+            }
+            .notification a{
+                font-weight: 1200;
+            }
+            
+            .content-wrapper {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                padding: 0 15px;
+            }
+            
+            .left-column, .right-column {
+                max-width: 100%;
+                width: 100%;
+            }
+            
+            .inputEditor {
+                height: 300px;
+            }
+            
+            .outputText {
+                height: 350px;
             }
             
             .button-group {
-                position: static;
-                margin: 20px auto;
+                justify-content: center;
             }
             
-            .hint-text, .result-note {
-                position: static;
+            .hint-text {
                 text-align: center;
             }
+            
+            .result-note {
+                text-align: center;
+                margin: 5px 0 0 0;
+            }
+            
+            .knowledge-cards {
+                margin: 30px auto 20px auto;
+                padding: 0 15px;
+            }
         }
-        
-        /* 手机端按钮优化 */
+
         @media (max-width: 480px) {
-            .btn {
-                padding: 10px 16px;
-                font-size: 14px;
-                min-width: 80px;
-            }
-            
             .title h1 {
-                font-size: 1.5rem;
+                font-size: 24px;
             }
             
-            .inputEditor, .outputText {
-                font-size: 16px;
+            .notification h1 {
+                font-size: 14px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+                padding: 0 20px;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .hint-text {
+                font-size: 14px;
+                padding: 0 15px;
+            }
+            
+            .result-note {
+                font-size: 14px;
             }
         }
     </style>
 </head>
 <body>
     <div class="main-content">
+
         <div class="title">
-            <h1>📝 TFLS 语法纠正程序</h1>
+            <h1>TFLS 语法纠正程序</h1>
+        </div>
+
+        <div class="notification">
+            <h1>网页处于测试阶段，鼓励大家<a href="https://v.wjx.cn/vm/eoqh3dU.aspx">评价网站</a>或者<a href="https://v.wjx.cn/vm/mHBy7Hf.aspx" class="note-link">反馈问题</a>！</h1>
         </div>
         
         <div class="content-wrapper">
-            <div class="input-container">
-                <div class="input-wrapper">
-                    <div class="inputEditor" id="inputEditor" contenteditable="true" data-placeholder="请粘贴需要检测的文本，或点击下方按钮上传/拍照"></div>
+            <!-- 左侧列 -->
+            <div class="left-column">
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <div class="inputEditor" id="inputEditor" contenteditable="true" data-placeholder="请粘贴需要检测的文本，或点击「上传附件」选择文件"></div>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="checkBtn" class="btn">语法检查</button>
+                    <button id="uploadBtn" class="btn">上传附件</button>
+                    <button id="resetBtn" class="btn">重置</button>
+                </div>
+                
+                <div class="hint-text">
+                    点击[语法检查]按钮，分析语法问题，并给出修改建议
+                    <br>目前上传附件仅支持txt格式，更多格式敬请期待
                 </div>
             </div>
-            <div class="output">
-                <div class="outputText" id="outputText">语法检查结果将显示在这里...</div>
+            
+            <!-- 右侧列 -->
+            <div class="right-column">
+                <div class="output">
+                    <div class="outputText" id="outputText">语法检查结果将显示在这里...</div>
+                </div>
+                
+                <div class="result-note">
+                    检测结果仅供参考
+                </div>
             </div>
-        </div>
-        
-        <div class="button-group">
-            <button id="checkBtn" class="btn">🔍 语法检查</button>
-            <button id="cameraBtn" class="btn btn-camera">📷 拍照识别</button>
-            <button id="uploadBtn" class="btn">📁 上传文件</button>
-            <button id="resetBtn" class="btn">🗑️ 重置</button>
-        </div>
-        
-        <div class="hint-text">
-            💡 支持格式：拍照 / 图片 / Word / PDF / 文本文件
-            <br>📱 手机可直接拍照识别作文本
-        </div>
-        
-        <div class="result-note">
-            检测结果仅供参考
         </div>
         
         <div class="knowledge-cards" id="knowledgeCards"></div>
@@ -501,33 +574,22 @@
     <div class="bottom-page">
         <div class="footer-links">
             <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html" class="footer-link">使用帮助</a>
-            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html"  class="footer-link">常见问题</a>
-            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/about.html"  class="footer-link">关于我们</a>
-            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/problem.html"  class="footer-link">反馈问题</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html" target="_blank" class="footer-link">常见问题</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/about.html" target="_blank" class="footer-link">关于我们</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/problem.html" target="_blank" class="footer-link">反馈问题</a>
         </div>
         <div class="credit-links">
             <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
         </div>
     </div>
     
-    <!-- 隐藏的文件上传 input，同时支持拍照和图库 -->
-    <input type="file" id="fileInput" accept=".txt,.docx,.pdf,.jpg,.jpeg,.png,image/*" hidden>
-    
-    <!-- 引入 mammoth.js 用于解析 DOCX -->
-    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-    
-    <!-- 引入 pdf.js 用于解析 PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
+    <input type="file" id="fileInput" accept=".txt,.md,.text/plain" hidden>
     
     <script>
         // ========== DOM 元素引用 ==========
         const inputEditor = document.getElementById('inputEditor');
         const outputDiv = document.getElementById('outputText');
         const checkBtn = document.getElementById('checkBtn');
-        const cameraBtn = document.getElementById('cameraBtn');
         const uploadBtn = document.getElementById('uploadBtn');
         const resetBtn = document.getElementById('resetBtn');
         const fileInput = document.getElementById('fileInput');
@@ -537,29 +599,15 @@
         const API_URL = 'https://api.languagetool.org/v2/check';
         const MAX_BYTES = 20000;
         
-        // ========== DMX API 配置（用于图片OCR） ==========
+        // ========== DMX API 统计配置（静默调用） ==========
         const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
         const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';
         
         let dmxCallCount = 0;
+
+        // ========== 全局变量 ==========
         let lastErrorMatches = [];
 
-        // 显示临时提示
-        function showToast(message, duration = 2500) {
-            let toast = document.querySelector('.upload-progress');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.className = 'upload-progress';
-                document.body.appendChild(toast);
-            }
-            toast.textContent = message;
-            toast.style.display = 'block';
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, duration);
-        }
-
-        // 获取编辑器纯文本
         function getEditorText() {
             const clone = inputEditor.cloneNode(true);
             const marks = clone.querySelectorAll('mark');
@@ -572,233 +620,66 @@
 
         function setEditorText(text) {
             inputEditor.innerText = text;
-            // 触发表单变化检测
-            const event = new Event('input', { bubbles: true });
-            inputEditor.dispatchEvent(event);
         }
 
-        // ========== PDF 解析 ==========
-        async function parsePdfFile(file) {
-            return new Promise(async (resolve, reject) => {
-                showToast('📄 正在解析 PDF...');
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-                    const pdf = await loadingTask.promise;
-                    
-                    let fullText = '';
-                    const totalPages = pdf.numPages;
-                    
-                    for (let i = 1; i <= totalPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map(item => item.str).join(' ');
-                        fullText += pageText + '\n';
-                    }
-                    
-                    if (!fullText || fullText.trim() === '') {
-                        reject(new Error('PDF 中未提取到文字（可能是扫描版）'));
-                    } else {
-                        showToast(`✅ PDF 解析完成，共 ${totalPages} 页`);
-                        resolve(fullText);
-                    }
-                } catch (err) {
-                    reject(new Error('PDF 解析失败: ' + err.message));
-                }
-            });
+        function setEditorHTML(html) {
+            inputEditor.innerHTML = html;
         }
 
-        // ========== 图片OCR ==========
-        async function recognizeImageFromFile(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const base64Data = e.target.result.split(',')[1];
-                    const fileType = file.type === 'image/png' ? 'png' : 'jpeg';
-                    
-                    try {
-                        showToast('🔍 AI 正在识别图片中的文字...');
-                        
-                        const response = await fetch(DMX_API_URL, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${DMX_API_KEY}`
-                            },
-                            body: JSON.stringify({
-                                model: "glm-4.1v-thinking-flash",
-                                messages: [
-                                    {
-                                        role: "user",
-                                        content: [
-                                            {
-                                                type: "image_url",
-                                                image_url: {
-                                                    url: `data:image/${fileType};base64,${base64Data}`
-                                                }
-                                            },
-                                            {
-                                                type: "text",
-                                                text: "请仔细识别这张图片中的所有文字内容，按原文顺序完整输出。如果是手写文字，尽力识别；如果是印刷体，准确提取。只输出识别到的文字，不要添加额外说明。"
-                                            }
-                                        ]
-                                    }
-                                ],
-                                temperature: 0.1
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (data.error) {
-                            reject(new Error(data.error.message || 'OCR 识别失败'));
-                        } else {
-                            const recognizedText = data.choices[0].message.content;
-                            showToast('✅ 图片识别完成');
-                            resolve(recognizedText);
-                        }
-                    } catch (err) {
-                        reject(err);
-                    }
-                };
-                reader.onerror = () => reject(new Error('读取图片失败'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // ========== 解析 DOCX ==========
-        async function parseDocxFile(file) {
-            return new Promise((resolve, reject) => {
-                showToast('📄 正在解析 Word 文档...');
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    try {
-                        const arrayBuffer = e.target.result;
-                        const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-                        const text = result.value;
-                        if (!text || text.trim() === '') {
-                            reject(new Error('DOCX 中未提取到文字'));
-                        } else {
-                            showToast('✅ Word 解析完成');
-                            resolve(text);
-                        }
-                    } catch (err) {
-                        reject(new Error('DOCX 解析失败: ' + err.message));
-                    }
-                };
-                reader.onerror = () => reject(new Error('读取 DOCX 失败'));
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        // ========== 解析 TXT ==========
-        function parseTxtFile(file) {
-            return new Promise((resolve, reject) => {
-                showToast('📝 正在读取文本...');
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    showToast('✅ 文本读取完成');
-                    resolve(e.target.result);
-                };
-                reader.onerror = () => reject(new Error('读取文本失败'));
-                reader.readAsText(file, 'UTF-8');
-            });
-        }
-
-        // ========== 统一文件处理 ==========
-        async function handleFile(file) {
-            const fileName = file.name.toLowerCase();
-            let extractedText = '';
-            
-            try {
-                if (fileName.endsWith('.txt') || fileName.endsWith('.md')) {
-                    extractedText = await parseTxtFile(file);
-                } 
-                else if (fileName.endsWith('.docx')) {
-                    extractedText = await parseDocxFile(file);
-                }
-                else if (fileName.endsWith('.pdf')) {
-                    extractedText = await parsePdfFile(file);
-                }
-                else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')) {
-                    extractedText = await recognizeImageFromFile(file);
-                }
-                else {
-                    throw new Error(`不支持: ${fileName}\n支持: .txt, .docx, .pdf, .jpg, .png`);
-                }
-                
-                if (extractedText && extractedText.trim()) {
-                    setEditorText(extractedText);
-                    lastErrorMatches = [];
-                    updateHighlight();
-                    outputDiv.innerHTML = '语法检查结果将显示在这里...';
-                    clearKnowledgeCards();
-                    updateCheckButtonState();
-                    showToast(`✅ 已加载: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-                } else {
-                    throw new Error('未提取到文字内容');
-                }
-                
-            } catch (err) {
-                console.error('文件处理错误:', err);
-                showToast(`❌ ${err.message}`, 4000);
-                outputDiv.innerHTML = `加载失败：\n${escapeHtml(err.message)}`;
-            }
-            
-            fileInput.value = '';
-        }
-
-        // ========== 拍照功能（手机直接调用摄像头） ==========
-        function takePhoto() {
-            // 创建临时 input，设置 capture 属性
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            // capture="environment" 调用后置摄像头
-            input.capture = 'environment';
-            input.onchange = async (e) => {
-                if (e.target.files && e.target.files[0]) {
-                    await handleFile(e.target.files[0]);
-                }
-            };
-            input.click();
-        }
-
-        // ========== 普通上传（电脑用） ==========
-        function triggerFileUpload() {
-            fileInput.click();
-        }
-
-        // ========== DMX 统计 ==========
         async function silentDMXStatistics() {
-            if (!DMX_API_KEY || DMX_API_KEY === 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9') {
+            if (!DMX_API_KEY || DMX_API_KEY === 'sk-你的实际令牌') {
+                console.log('[DMX统计] 未配置有效令牌，跳过统计');
                 return;
             }
+            
             try {
+                const testMessage = {
+                    model: "GLM-4.1V-Thinking-Flash",
+                    messages: [
+                        { role: "user", content: "test" }
+                    ],
+                    max_tokens: 1,
+                    stream: false
+                };
+                
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                await fetch(DMX_API_URL, {
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
+                const response = await fetch(DMX_API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${DMX_API_KEY}`
                     },
-                    body: JSON.stringify({
-                        model: "glm-4.1v-thinking-flash",
-                        messages: [{ role: "user", content: "test" }],
-                        max_tokens: 1
-                    }),
+                    body: JSON.stringify(testMessage),
                     signal: controller.signal
                 });
+                
                 clearTimeout(timeoutId);
+                
                 dmxCallCount++;
-                console.log(`[DMX统计] 调用次数: ${dmxCallCount}`);
-            } catch (error) {}
+                console.log(`[DMX统计] API调用成功，本次语法检查已计入统计。总调用次数: ${dmxCallCount}`);
+                
+                const usageRemaining = response.headers.get('X-RateLimit-Remaining');
+                if (usageRemaining) {
+                    console.log(`[DMX统计] 剩余配额: ${usageRemaining}`);
+                }
+                
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('[DMX统计] 请求超时，但调用已记录');
+                } else {
+                    console.log('[DMX统计] 调用失败（不影响语法检测）:', error.message);
+                }
+            }
         }
 
-        // ========== 写作分析 ==========
         function getWritingStats(text) {
             if (!text || !text.trim()) {
-                return { totalWords: 0, totalChars: 0, sentenceCount: 0, avgSentenceLength: 0, lexicalDiversity: 0, uniqueWordsCount: 0 };
+                return {
+                    totalWords: 0, totalChars: 0, sentenceCount: 0,
+                    avgSentenceLength: 0, lexicalDiversity: 0, uniqueWordsCount: 0
+                };
             }
             const totalChars = text.replace(/\s/g, '').length;
             const words = text.trim().split(/\s+/).filter(w => w.length > 0);
@@ -813,36 +694,103 @@
         }
         
         function getStatsText(stats) {
-            return '📊 【写作分析统计】\n' +
-                `   📝 总词数：${stats.totalWords}\n` +
-                `   🔤 字符数：${stats.totalChars}\n` +
-                `   📖 句子数：${stats.sentenceCount}\n` +
+            return '📊 【写作分析统计指标】\n' +
+                `   📝 总词数：${stats.totalWords} 词\n` +
+                `   🔤 总字符数（不含空格）：${stats.totalChars} 字符\n` +
+                `   📖 句子数：${stats.sentenceCount} 句\n` +
                 `   📏 平均句长：${stats.avgSentenceLength} 词/句\n` +
-                `   🌈 词汇多样性：${stats.lexicalDiversity}%\n` +
-                `   ⭐ 不重复词：${stats.uniqueWordsCount}\n\n${'─'.repeat(40)}\n\n`;
+                `   🌈 词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
+                `   ⭐ 不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
         }
 
-        // ========== 知识库 ==========
         const knowledgeBase = {
-            '主谓一致问题': { title: '📝 主谓一致', content: '主语和谓语动词必须在人称和数上保持一致。', examples: ['✅ He plays football.', '❌ He play football.'] },
-            '冠词使用错误': { title: '🔤 冠词使用', content: '冠词 "a" 用于辅音音素前，"an" 用于元音音素前。', examples: ['✅ a university', '✅ an hour'] },
-            '时态问题': { title: '⏰ 时态使用', content: '动词时态需要与时间状语和上下文保持一致。', examples: ['✅ I went yesterday.', '❌ I go yesterday.'] },
-            '拼写问题': { title: '✏️ 拼写检查', content: '单词拼写错误可能影响阅读理解。', examples: ['✅ receive', '❌ recieve'] },
-            '标点符号': { title: '📖 标点符号', content: '正确使用标点符号能使句子结构清晰。', examples: ['✅ What time is it?', '❌ What time is it'] },
-            '情态动词使用错误': { title: '📖 情态动词', content: '情态动词后动词应使用原形。', examples: ['✅ He can do it.', '❌ He can does it.'] },
-            '默认': { title: '💡 语法知识', content: '注意检查句子的语法结构，确保表达清晰准确。', examples: ['建议查阅语法参考书', '多读多写提高语感'] }
+            '主谓一致问题': { 
+                title: '📝 主谓一致',
+                content: '主语和谓语动词必须在人称和数上保持一致。单数主语用单数动词，复数主语用复数动词。',
+                examples: ['✅ He **plays** football every day.', '❌ He play football every day.', '✅ They **play** football every day.', '❌ They plays football every day.'],
+                exercises: [
+                    { question: "The cat ___ on the sofa.", options: ["is", "are"], answer: 0, feedback: "主语是单数名词 'cat'，谓语动词用单数形式 is。" },
+                    { question: "My brothers ___ playing soccer in the park.", options: ["is", "are"], answer: 1, feedback: "主语是复数名词 'brothers'，谓语动词用复数形式 are。" },
+                    { question: "Either my parents or my sister ___ responsible for picking me up.", options: ["is", "are"], answer: 0, feedback: "由 'either...or...' 连接时，谓语动词与最近的主语一致。'sister' 是单数，故用 is。" },
+                    { question: "A number of students ___ attending the lecture.", options: ["is", "are"], answer: 1, feedback: "'a number of + 复数名词' 表示'许多'，主语为复数，用 are。" },
+                    { question: "The list of items that need to be checked ___ getting longer.", options: ["is", "are"], answer: 0, feedback: "主语是 'the list'（单数），定语从句不影响主语的单复数，用 is。" }
+                ]
+            },
+            '冠词使用错误': { 
+                title: '🔤 冠词使用 (a/an/the)',
+                content: '冠词 "a" 用于以辅音音素开头的单词前，"an" 用于以元音音素开头的单词前。注意是发音不是字母。',
+                examples: ['✅ **a** university (/ju:/ 辅音音素)', '✅ **an** hour (元音音素，h不发音)', '✅ **an** apple', '✅ **a** cat'],
+                exercises: [
+                    { question: "She has ___ apple in her bag.", options: ["a", "an", "the"], answer: 1, feedback: "'apple' 以元音音素 /æ/ 开头，泛指一个苹果，用不定冠词 an。" },
+                    { question: "I saw ___ movie last night. ___ movie was amazing!", options: ["a / The", "an / A", "the / An"], answer: 0, feedback: "第一空首次提及用 a；第二空上文已提到的特定电影，特指用 the。" },
+                    { question: "He plays ___ piano every evening, but he doesn't like ___ homework.", options: ["the / the", "the / (零冠词)", "a / the"], answer: 1, feedback: "乐器前加 the（play the piano）；学科、作业等抽象名词前泛指时不加冠词。" },
+                    { question: "It's ___ honor to meet you. You're ___ most beautiful person I've ever seen.", options: ["a / a", "an / the", "an / a"], answer: 1, feedback: "'honor' 以元音音素开头用 an；形容词最高级前必须加 the。" },
+                    { question: "In ___ morning, I usually drink ___ cup of coffee while reading ___ news.", options: ["the / a / (零冠词)", "the / the / the", "a / a / the"], answer: 0, feedback: "'in the morning' 固定搭配；'cup' 可数单数泛指用 a；'news' 不可数泛指零冠词。" }
+                ]
+            },
+            '时态问题': {
+                title: '⏰ 时态使用',
+                content: '动词时态需要与时间状语和上下文保持一致。常见时态包括一般现在时、一般过去时、现在完成时等。',
+                examples: ['✅ I **went** to the store yesterday.', '❌ I go to the store yesterday.', '✅ She **has finished** her homework.', '❌ She finish her homework.'],
+                exercises: [
+                    { question: "By the time we arrived at the station, the train ___ for ten minutes, so we had to wait for the next one.", options: ["has left", "had left", "had been away", "was leaving"], answer: 2, feedback: "'had been away' 是过去完成时，'be away' 是持续性状态，可与 'for ten minutes' 搭配。" },
+                    { question: "She told me she ___ the manuscript three times before she finally decided to submit it.", options: ["revised", "had revised", "has revised", "was revising"], answer: 1, feedback: "动作发生在 'told' 之前，构成'过去的过去'，用过去完成时 had revised。" },
+                    { question: "I ___ on this project for six hours straight, and I still haven't figured out the core issue.", options: ["have been working", "had been working", "worked", "am working"], answer: 0, feedback: "从过去持续到现在并可能继续，用现在完成进行时 have been working。" },
+                    { question: "When I called him at 9 p.m. yesterday, he said he ___ dinner and couldn't talk long.", options: ["is having", "was having", "has had", "had had"], answer: 1, feedback: "过去具体时间点正在发生的动作，用过去进行时 was having。" },
+                    { question: "It ___ for nearly a week before the rescue team finally reached the trapped hikers.", options: ["rained", "had been raining", "has rained", "was raining"], answer: 1, feedback: "过去某一时间之前持续进行的动作，用过去完成进行时 had been raining。" }
+                ]
+            },
+            '拼写问题': {
+                title: '✏️ 拼写检查',
+                content: '单词拼写错误可能影响阅读理解。建议使用词典确认正确拼写。',
+                examples: ['✅ receive (不是 recieve)', '✅ separate (不是 seperate)', '✅ definitely (不是 definately)'],
+                exercises: [
+                    { question: "The artist's unique s___ (风格) blends traditional and modern elements.", options: ["stile", "style", "stlye"], answer: 1, feedback: "正确拼写是 style。注意与 stile（门阶）区分，y 在词中发 /aɪ/ 音。" },
+                    { question: "The company issued a formal ___ (道歉) for the service failure.", options: ["apology", "apollogy", "apologe"], answer: 0, feedback: "正确拼写是 apology。注意词尾是 -logy，易误拼为 apollogy（双 l）或 apologe。" },
+                    { question: "The scientist proposed a new t___ (理论) to explain the phenomenon.", options: ["theory", "theroy", "thoery"], answer: 0, feedback: "正确拼写是 theory。注意与 therapy 区分，eo 组合易误拼。" },
+                    { question: "The new policy aims to p___ (促进) sustainable development.", options: ["promote", "promotte", "promotee"], answer: 0, feedback: "正确拼写是 promote。注意 -mote 来自拉丁语 movere（移动），易误拼为 promotte。" },
+                    { question: "Choose the correct spelling of 'definitely':", options: ["definately", "definitely", "definatly"], answer: 1, feedback: "正确拼写是 definitely。常见错误包括 definately 和 definatly。" }
+                ]
+            },
+            '标点符号': {
+                title: '📖 标点符号',
+                content: '正确使用标点符号能使句子结构清晰，表达准确。注意中英文标点的区别。',
+                examples: ['✅ What time is it?', '✅ I like apples, oranges, and bananas.', '❌ I like apples oranges and bananas'],
+                exercises: [
+                    { question: "The conference will feature speakers from London, England ___ Paris, France ___ and Tokyo, Japan.", options: ["; ;", ", ,", ", ;", "; ,"], answer: 0, feedback: "当并列项内部已包含逗号时，各项之间必须用分号分隔，以避免混淆。" },
+                    { question: "判断标点使用：The teacher said, \"homework is due tomorrow\".", options: ["正确", "错误，应改为 The teacher said, \"Homework is due tomorrow.\""], answer: 1, feedback: "引语内首字母需大写，句号应放在引号内部（美式规则）。" },
+                    { question: "It was raining heavily; ___ we decided to stay indoors.", options: [",", ";", "."], answer: 0, feedback: "此处由连词隐含连接，应用逗号。若无连词则可用分号连接两个独立分句。" },
+                    { question: "以下句子中撇号使用正确的一项是：", options: ["Its a beautiful day.", "It's a beautiful day.", "Its' a beautiful day."], answer: 1, feedback: "It's 是 it is 的缩写，必须带撇号；its 是所有格，不加撇号。" },
+                    { question: "以下句子中分号使用正确的一项是：", options: ["I have a meeting at 3 p.m; don't be late.", "I have a meeting at 3 p.m.; don't be late.", "I have a meeting at 3 p.m., don't be late.", "I have a meeting at 3 p.m. don't be late."], answer: 1, feedback: "p.m. 是缩写必须加句号；两个独立分句无连词，用分号连接正确。" }
+                ]
+            },
+            '情态动词使用错误': {
+                title: '📖 情态动词',
+                content: '动词前有情态动词(can, may, should...)，动词应使用原形。情态动词本身表示可能性、必要性、意愿等。',
+                examples: ['✅ He can do it.', '✅ We should arrive early.', '❌ She may agrees with the opinion.'],
+                exercises: [
+                    { question: "You ___ turn off the lights when you leave the room. It saves energy.", options: ["can", "should", "may", "will"], answer: 1, feedback: "should 表示建议或义务，意为'应该'，符合节能环保的劝告语境。" },
+                    { question: "--- Must I finish the report today? --- No, you ___. You can hand it in tomorrow.", options: ["mustn't", "can't", "needn't", "shouldn't"], answer: 2, feedback: "Must I...? 的否定回答用 needn't 或 don't have to，表示'不必'。" },
+                    { question: "The phone is ringing, but no one's answering. They ___ be at home.", options: ["can't", "mustn't", "shouldn't", "might not"], answer: 0, feedback: "根据语境'电话响但没人接'，说话人做出否定推测'不可能在家'，用 can't。" },
+                    { question: "When I was a child, I ___ swim very well, but now I'm a bit rusty.", options: ["would", "could", "might", "should"], answer: 1, feedback: "could 表示过去的能力，此处指'小时候能游泳'。" },
+                    { question: "You ___ have told me earlier! I wouldn't have made such a mistake.", options: ["must", "should", "could", "may"], answer: 1, feedback: "should have done 表示'本该做却未做'，含有责备或遗憾语气。" }
+                ]
+            },
+            '默认': {
+                title: '💡 语法知识',
+                content: '注意检查句子的语法结构，确保表达清晰准确。可以参考语法书籍或在线资源学习。',
+                examples: ['建议查阅语法参考书', '多读多写提高语感', '注意句子结构的完整性'],
+                exercises: [
+                    { question: "To improve grammar, you should ___ daily.", options: ["practice", "practices", "practicing"], answer: 0, feedback: "情态动词 should 后接动词原形 practice。" },
+                    { question: "Which sentence is correct?", options: ["He don't like coffee.", "He doesn't like coffee.", "He not like coffee."], answer: 1, feedback: "第三人称单数否定用 doesn't + 动词原形。" },
+                    { question: "Choose the correct form: She ___ to school every day.", options: ["go", "goes", "going"], answer: 1, feedback: "主语 She 是第三人称单数，一般现在时动词加 es。" },
+                    { question: "Which sentence uses correct word order?", options: ["I always am happy.", "I am always happy.", "Always I am happy."], answer: 1, feedback: "频度副词 always 放在 be 动词之后。" },
+                    { question: "Choose the correct comparative: This book is ___ than that one.", options: ["more interesting", "interestinger", "most interesting"], answer: 0, feedback: "多音节形容词的比较级用 more + 形容词原形。" }
+                ]
+            }
         };
 
-        function getKnowledgeForIssueType(issueType) {
-            if (issueType.includes('主谓一致')) return knowledgeBase['主谓一致问题'];
-            if (issueType.includes('冠词')) return knowledgeBase['冠词使用错误'];
-            if (issueType.includes('时态')) return knowledgeBase['时态问题'];
-            if (issueType.includes('拼写')) return knowledgeBase['拼写问题'];
-            if (issueType.includes('标点')) return knowledgeBase['标点符号'];
-            if (issueType.includes('情态')) return knowledgeBase['情态动词使用错误'];
-            return knowledgeBase['默认'];
-        }
-
+        function getByteLength(str) { return new Blob([str]).size; }
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -850,115 +798,286 @@
             return div.innerHTML;
         }
 
-        function generateKnowledgeCards(issueTypes) {
-            const uniqueTypes = [...new Set(issueTypes)];
-            let cardsHtml = '';
-            uniqueTypes.forEach((type) => {
-                const knowledge = getKnowledgeForIssueType(type);
-                const exampleHtml = knowledge.examples.map(ex => ex.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>');
-                cardsHtml += `
-                    <div class="knowledge-card" data-card-type="${escapeHtml(type)}">
-                        <div class="card-type">${escapeHtml(type)}</div>
-                        <h3>${knowledge.title}</h3>
-                        <div class="card-content">${knowledge.content}</div>
-                        <div class="example">${exampleHtml}</div>
-                    </div>
-                `;
-            });
-            knowledgeCardsContainer.innerHTML = cardsHtml;
-        }
-
-        function clearKnowledgeCards() { knowledgeCardsContainer.innerHTML = ''; }
-
-        function scrollToCard(issueType) {
-            const cards = document.querySelectorAll('.knowledge-card');
-            for (const card of cards) {
-                if (card.getAttribute('data-card-type') === issueType) {
-                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    card.classList.add('highlight-card');
-                    setTimeout(() => card.classList.remove('highlight-card'), 2000);
-                    break;
-                }
-            }
-        }
-
-        // ========== 高亮功能 ==========
         function highlightErrorsInText(text, matches) {
             if (!matches || matches.length === 0) return escapeHtml(text);
+            
             const highlights = [];
             for (const match of matches) {
-                if (match.offset !== undefined && match.length !== undefined && match.offset >= 0 && match.offset + match.length <= text.length) {
-                    highlights.push({ start: match.offset, end: match.offset + match.length, message: match.message });
+                let globalOffset = match.offset;
+                let globalLength = match.length;
+                if (globalOffset !== undefined && globalLength !== undefined && 
+                    globalOffset >= 0 && globalOffset + globalLength <= text.length) {
+                    highlights.push({ start: globalOffset, end: globalOffset + globalLength, message: match.message, replacements: match.replacements || [] });
                 } else if (match.context?.text) {
-                    const ctx = match.context.text;
-                    const off = match.context.offset || 0;
-                    const len = match.context.length || 0;
-                    const searchText = ctx.substring(off, off + len);
-                    if (searchText) {
+                    const context = match.context.text;
+                    const offset = match.context.offset || 0;
+                    const length = match.context.length || 0;
+                    const searchText = context.substring(offset, offset + length);
+                    if (searchText && searchText.length > 0) {
                         let idx = text.indexOf(searchText);
-                        if (idx !== -1) highlights.push({ start: idx, end: idx + searchText.length, message: match.message });
+                        if (idx !== -1) {
+                            highlights.push({ start: idx, end: idx + searchText.length, message: match.message, replacements: match.replacements || [] });
+                        }
                     }
                 }
             }
+            
             highlights.sort((a, b) => a.start - b.start);
-            let result = '', pos = 0;
+            
+            const merged = [];
             for (const h of highlights) {
-                if (h.start > pos) result += escapeHtml(text.substring(pos, h.start));
-                result += `<mark title="${escapeHtml(h.message)}">${escapeHtml(text.substring(h.start, h.end))}</mark>`;
-                pos = h.end;
+                if (merged.length === 0) {
+                    merged.push({ ...h });
+                } else {
+                    const last = merged[merged.length - 1];
+                    if (h.start <= last.end) {
+                        last.end = Math.max(last.end, h.end);
+                        if (last.message !== h.message) {
+                            last.message = last.message + '; ' + h.message;
+                        }
+                    } else {
+                        merged.push({ ...h });
+                    }
+                }
             }
-            if (pos < text.length) result += escapeHtml(text.substring(pos));
+            
+            let result = '';
+            let currentPos = 0;
+            for (const h of merged) {
+                if (h.start > currentPos) {
+                    result += escapeHtml(text.substring(currentPos, h.start));
+                }
+                const errorText = text.substring(h.start, h.end);
+                let titleText = h.message;
+                if (titleText.length > 150) {
+                    titleText = titleText.substring(0, 150) + '...';
+                }
+                if (h.replacements && h.replacements.length > 0) {
+                    const suggestions = h.replacements.slice(0, 3).map(r => r.value).join('、');
+                    titleText += `\n建议修改为: ${suggestions}`;
+                }
+                result += `<mark title="${escapeHtml(titleText)}">${escapeHtml(errorText)}</mark>`;
+                currentPos = h.end;
+            }
+            if (currentPos < text.length) {
+                result += escapeHtml(text.substring(currentPos));
+            }
             return result;
         }
-
+        
         function updateHighlight() {
             const text = getEditorText();
             if (!lastErrorMatches || lastErrorMatches.length === 0 || !text.trim()) {
                 const plainHtml = escapeHtml(text);
-                if (inputEditor.innerHTML !== plainHtml) inputEditor.innerHTML = plainHtml;
+                if (inputEditor.innerHTML !== plainHtml) {
+                    inputEditor.innerHTML = plainHtml;
+                }
                 return;
             }
             const highlightedHtml = highlightErrorsInText(text, lastErrorMatches);
-            if (inputEditor.innerHTML !== highlightedHtml) inputEditor.innerHTML = highlightedHtml;
+            if (inputEditor.innerHTML !== highlightedHtml) {
+                inputEditor.innerHTML = highlightedHtml;
+            }
         }
 
-        // ========== 问题类型检测 ==========
-        function getIssueType(match) {
-            const msg = match.message;
-            if (/subject-verb agreement|agreement: subject/i.test(msg)) return '主谓一致问题';
-            if (/article|indefinite article/i.test(msg)) return '冠词使用错误';
-            if (/tense|past|present|future/i.test(msg)) return '时态问题';
-            if (/spelling/i.test(msg)) return '拼写问题';
-            if (/punctuation/i.test(msg)) return '标点符号';
-            if (/modal verb|base form/i.test(msg)) return '情态动词使用错误';
-            return match.rule?.category?.name || '语法问题';
+        function getKnowledgeForIssueType(issueType) {
+            if (issueType.includes('主谓一致')) return knowledgeBase['主谓一致问题'];
+            if (issueType.includes('冠词')) return knowledgeBase['冠词使用错误'];
+            if (issueType.includes('时态') || issueType.includes('Tense')) return knowledgeBase['时态问题'];
+            if (issueType.includes('拼写') || issueType.includes('Spelling')) return knowledgeBase['拼写问题'];
+            if (issueType.includes('标点') || issueType.includes('Punctuation')) return knowledgeBase['标点符号'];
+            if (issueType.includes('情态')) return knowledgeBase['情态动词使用错误'];
+            return knowledgeBase['默认'];
+        }
+
+        function renderExercises(exercises, cardUniqueId) {
+            if (!exercises || exercises.length === 0) return '';
+            let html = `<div class="exercise-section"><div class="exercise-title">📝 专项练习 (共${exercises.length}题，点击核对答案)</div>`;
+            exercises.forEach((ex, idx) => {
+                const optionGroupName = `q_${cardUniqueId}_${idx}`;
+                html += `
+                    <div class="exercise-item" data-exercise-index="${idx}" data-card-id="${cardUniqueId}">
+                        <div class="exercise-question">${idx+1}. ${escapeHtml(ex.question)}</div>
+                        <div class="exercise-options" data-group="${optionGroupName}">
+                            ${ex.options.map((opt, optIdx) => `
+                                <label class="exercise-option">
+                                    <input type="radio" name="${optionGroupName}" value="${optIdx}">
+                                    <span>${escapeHtml(opt)}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <button class="check-answer-btn" data-card-id="${cardUniqueId}" data-ex-idx="${idx}">核对答案</button>
+                        <div class="exercise-feedback" data-feedback-idx="${idx}"></div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            return html;
+        }
+
+        let exercisesDataMap = new Map();
+
+        function generateKnowledgeCards(issueTypes) {
+            const uniqueTypes = [...new Set(issueTypes)];
+            let cardsHtml = '';
+            exercisesDataMap.clear();
+            
+            uniqueTypes.forEach((type, index) => {
+                const knowledge = getKnowledgeForIssueType(type);
+                const cardId = `card-${index}-${Date.now()}-${Math.random()}`;
+                const exampleHtml = knowledge.examples.map(ex => ex.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>');
+                let exercisesHtml = '';
+                if (knowledge.exercises && knowledge.exercises.length) {
+                    exercisesHtml = renderExercises(knowledge.exercises, cardId);
+                    knowledge.exercises.forEach((ex, exIdx) => {
+                        const key = `${cardId}_${exIdx}`;
+                        exercisesDataMap.set(key, { answer: ex.answer, feedback: ex.feedback, options: ex.options });
+                    });
+                } else {
+                    exercisesHtml = `<div class="exercise-section"><div class="exercise-title">📚 暂无专项练习，请参考语法示例</div></div>`;
+                }
+                
+                cardsHtml += `
+                    <div class="knowledge-card" id="${cardId}" data-card-type="${type}">
+                        <div class="card-type">${escapeHtml(type)}</div>
+                        <h3>${knowledge.title}</h3>
+                        <div class="card-content">${knowledge.content}</div>
+                        <div class="example">${exampleHtml}</div>
+                        ${exercisesHtml}
+                    </div>
+                `;
+            });
+            
+            knowledgeCardsContainer.innerHTML = cardsHtml;
+            attachExerciseEvents();
+        }
+        
+        function attachExerciseEvents() {
+            document.querySelectorAll('.check-answer-btn').forEach(btn => {
+                btn.removeEventListener('click', handleCheckAnswer);
+                btn.addEventListener('click', handleCheckAnswer);
+            });
+        }
+        
+        function handleCheckAnswer(e) {
+            const btn = e.currentTarget;
+            const cardId = btn.getAttribute('data-card-id');
+            const exIdx = parseInt(btn.getAttribute('data-ex-idx'));
+            if (isNaN(exIdx)) return;
+            const exerciseItem = btn.closest('.exercise-item');
+            if (!exerciseItem) return;
+            const selectedRadio = exerciseItem.querySelector('input[type="radio"]:checked');
+            const feedbackDiv = exerciseItem.querySelector('.exercise-feedback');
+            if (!feedbackDiv) return;
+            const key = `${cardId}_${exIdx}`;
+            const exerciseData = exercisesDataMap.get(key);
+            if (!exerciseData) {
+                feedbackDiv.textContent = "题目数据错误，请刷新重试。";
+                feedbackDiv.classList.add('wrong-feedback');
+                return;
+            }
+            if (!selectedRadio) {
+                feedbackDiv.textContent = "请先选择一个选项！";
+                feedbackDiv.classList.add('wrong-feedback');
+                return;
+            }
+            const selectedVal = parseInt(selectedRadio.value);
+            const isCorrect = (selectedVal === exerciseData.answer);
+            if (isCorrect) {
+                feedbackDiv.innerHTML = `✅ 回答正确！ ${escapeHtml(exerciseData.feedback || '很棒！')}`;
+                feedbackDiv.classList.remove('wrong-feedback');
+                feedbackDiv.classList.add('correct-feedback');
+            } else {
+                const correctOptionText = (exerciseData.options && exerciseData.options[exerciseData.answer]) ? exerciseData.options[exerciseData.answer] : '正确答案';
+                feedbackDiv.innerHTML = `❌ 回答错误。正确答案是 "${escapeHtml(correctOptionText)}"。 ${escapeHtml(exerciseData.feedback || '再试试看！')}`;
+                feedbackDiv.classList.remove('correct-feedback');
+                feedbackDiv.classList.add('wrong-feedback');
+            }
+        }
+        
+        function clearKnowledgeCards() {
+            knowledgeCardsContainer.innerHTML = '';
+            exercisesDataMap.clear();
+        }
+
+        function scrollToCard(issueType) {
+            const cards = document.querySelectorAll('.knowledge-card');
+            let target = null;
+            for (const card of cards) {
+                if (card.getAttribute('data-card-type') === issueType) { target = card; break; }
+            }
+            if (target) {
+                document.querySelectorAll('.knowledge-card').forEach(c => c.classList.remove('highlight-card'));
+                target.classList.add('highlight-card');
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => target.classList.remove('highlight-card'), 3000);
+            } else {
+                const msg = document.createElement('div');
+                msg.textContent = `未找到"${issueType}"卡片`;
+                msg.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#ff9800; color:white; padding:8px 16px; border-radius:8px; z-index:1000;';
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 2000);
+            }
+        }
+
+        const subjectVerbAgreementPatterns = [
+            /pronoun ['‘](I|He|She|It|We|You|They)['’] (is|are|was|were|should be|must be|is usually|is often) used with/i,
+            /third-person (singular )?verb/i,
+            /subject-verb agreement/i,
+            /agreement: (subject|verb)/i
+        ];
+        function isSubjectVerbAgreement(msg) { return subjectVerbAgreementPatterns.some(p => p.test(msg)); }
+        const articleUsagePatterns = [
+            /use\W*["'‘“”]?(a|an)["'‘“”]?\W+instead\W+of\W+["'‘“”]?(a|an)["'‘“”]?/i,
+            /article.*\b(a|an)\b.*vowel\s*sound/i,
+            /indefinite\s+article/i
+        ];
+        function isArticleUsageIssue(msg) { return articleUsagePatterns.some(p => p.test(msg)); }
+        const modalVerbPatterns = [/modal\s+verb.*base\s+form/i, /requires?\s+the\s+base\s+form/i, /after\s+['"]?(must|can|could|may|might|will|would|shall|should)['"]?/i];
+        function isModalUsageIssue(msg) { return modalVerbPatterns.some(p => p.test(msg)); }
+        function getIssueType(match, isAgree, isArt, isModal) {
+            if (isAgree) return '主谓一致问题';
+            if (isArt) return '冠词使用错误';
+            if (isModal) return '情态动词使用错误';
+            if (match.rule?.category?.name) return match.rule.category.name;
+            return '语法问题';
         }
 
         function formatResult(data, originalText) {
             lastErrorMatches = data.matches || [];
             const stats = getWritingStats(originalText);
             let result = getStatsText(stats);
+            
             if (!data.matches || data.matches.length === 0) {
-                result += "✨ 未发现语法或拼写问题";
+                result += "✨ 未发现语法或拼写问题\n（时态等部分语法问题暂时无法检测）";
                 clearKnowledgeCards();
                 return result;
             }
-            result += `📋 共发现 ${data.matches.length} 处问题：\n\n`;
+            
+            result += `📋 共发现 ${data.matches.length} 处语法问题：\n\n`;
             const issueTypesList = [];
+            
             data.matches.forEach((match, idx) => {
                 const ctx = match.context?.text || '';
                 const off = match.context?.offset || 0;
                 const len = match.context?.length || 0;
                 const errorWord = ctx.substring(off, off+len);
-                const issueType = getIssueType(match);
+                const isAgree = isSubjectVerbAgreement(match.message);
+                const isArt = isArticleUsageIssue(match.message);
+                const isModal = isModalUsageIssue(match.message);
+                const issueType = getIssueType(match, isAgree, isArt, isModal);
                 issueTypesList.push(issueType);
-                result += `${idx+1}. “${escapeHtml(errorWord || '未知')}”\n`;
-                result += `   ${escapeHtml(match.message)}\n`;
-                if (match.replacements?.length) result += `   建议: ${match.replacements.slice(0,3).map(r=>r.value).join('、')}\n`;
-                result += `   <a href="#" class="issue-type-link" data-issue-type="${escapeHtml(issueType)}">📖 ${escapeHtml(issueType)}</a>\n`;
+                
+                result += `${idx+1}. 问题位置: "${escapeHtml(errorWord || '未知')}"\n`;
+                if (isAgree) result += `   说明: 主谓一致问题\n`;
+                else if (isArt) result += `   说明: 冠词使用错误\n`;
+                else if (isModal) result += `   说明: 情态动词使用错误 - 动词应保持原形\n`;
+                else result += `   说明: ${escapeHtml(match.message)}\n`;
+                if (match.replacements?.length) result += `   建议: ${match.replacements.slice(0,5).map(r=>r.value).join('、')}\n`;
+                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${idx}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
                 result += `   ───────────────────────────────\n`;
             });
-            result += `\n💡 点击问题类型查看知识卡片`;
+            result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
             generateKnowledgeCards(issueTypesList);
             return result;
         }
@@ -966,83 +1085,73 @@
         function setupOutputLinks() {
             outputDiv.addEventListener('click', (e) => {
                 const link = e.target.closest('.issue-type-link');
-                if (link && link.dataset.issueType) {
+                if (link && link.dataset.issueIndex !== undefined) {
                     e.preventDefault();
-                    scrollToCard(link.dataset.issueType);
+                    const issueType = link.dataset.issueType;
+                    scrollToCard(issueType);
                 }
             });
         }
 
-        // ========== 语法检查 ==========
         function showError(msg) { outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}`; lastErrorMatches = []; updateHighlight(); clearKnowledgeCards(); }
         function updateCheckButtonState() { const has = getEditorText().trim().length > 0; checkBtn.disabled = !has; checkBtn.classList.toggle('button-disabled', !has); checkBtn.classList.toggle('button-enabled', has); }
         function resetAll() { setEditorText(''); outputDiv.innerHTML = '语法检查结果将显示在这里...'; lastErrorMatches = []; updateHighlight(); updateCheckButtonState(); clearKnowledgeCards(); }
         
-        function getByteLength(str) { return new Blob([str]).size; }
-        
         async function checkGrammar() {
             const text = getEditorText();
             if (!text.trim()) return showError("请输入待检测的文本");
-            if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 20KB`);
+            if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 ≤ 20KB`);
             
             silentDMXStatistics();
-            checkBtn.disabled = true;
-            checkBtn.textContent = '检查中...';
-            outputDiv.innerHTML = '正在分析语法...';
-            lastErrorMatches = [];
-            updateHighlight();
-            clearKnowledgeCards();
+            
+            checkBtn.disabled = true; const originalText = checkBtn.innerText; checkBtn.innerText = '检查中...';
+            outputDiv.innerHTML = '正在分析语法...'; lastErrorMatches = []; updateHighlight(); clearKnowledgeCards();
             try {
-                const params = new URLSearchParams();
-                params.append('text', text);
-                params.append('language', 'en');
-                params.append('enabledOnly', 'false');
+                const params = new URLSearchParams(); params.append('text', text); params.append('language', 'en'); params.append('enabledOnly', 'false');
                 const resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
                 if (!resp.ok) throw new Error(`API ${resp.status}`);
                 const data = await resp.json();
                 outputDiv.innerHTML = formatResult(data, text);
                 setupOutputLinks();
                 updateHighlight();
-            } catch (err) {
-                showError(err.message || '网络异常');
-            } finally {
-                checkBtn.textContent = '🔍 语法检查';
+            } catch (err) { showError(err.message || '网络异常'); } 
+            finally { checkBtn.innerText = originalText; updateCheckButtonState(); }
+        }
+        
+        function triggerFileUpload() { fileInput.click(); }
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5*1024*1024) return showError("文件 > 5MB");
+            const reader = new FileReader();
+            reader.onload = (ev) => { 
+                setEditorText(ev.target.result); 
+                lastErrorMatches = []; 
+                updateHighlight(); 
+                outputDiv.innerHTML = '语法检查结果将显示在这里...'; 
+                clearKnowledgeCards(); 
                 updateCheckButtonState();
-            }
+            };
+            reader.readAsText(file, 'UTF-8');
+            fileInput.value = '';
         }
-
-        // ========== 拖拽上传（电脑） ==========
-        function setupDragAndDrop() {
-            document.body.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
-            document.body.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); });
-            
-            inputEditor.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                inputEditor.classList.add('drag-over');
-            });
-            inputEditor.addEventListener('dragleave', () => {
-                inputEditor.classList.remove('drag-over');
-            });
-            inputEditor.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                inputEditor.classList.remove('drag-over');
-                const files = e.dataTransfer.files;
-                if (files && files.length > 0) {
-                    await handleFile(files[0]);
-                }
-            });
-        }
-
-        // ========== 事件绑定 ==========
+        
         checkBtn.addEventListener('click', checkGrammar);
-        cameraBtn.addEventListener('click', takePhoto);
         uploadBtn.addEventListener('click', triggerFileUpload);
         resetBtn.addEventListener('click', resetAll);
-        fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-        inputEditor.addEventListener('input', () => {
-            if (lastErrorMatches.length) { lastErrorMatches = []; updateHighlight(); clearKnowledgeCards(); }
-            updateCheckButtonState();
+        inputEditor.addEventListener('input', () => { 
+            if(lastErrorMatches.length) { 
+                lastErrorMatches = []; 
+                updateHighlight(); 
+                clearKnowledgeCards(); 
+            } 
+            updateCheckButtonState(); 
         });
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        updateCheckButtonState();
+        setupOutputLinks();
+        inputEditor.addEventListener('keydown', (e) => { if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !checkBtn.disabled) checkGrammar(); });
         
         inputEditor.addEventListener('paste', function(e) {
             e.preventDefault();
@@ -1050,13 +1159,11 @@
             document.execCommand('insertText', false, text);
         });
 
-        // 初始化
-        setupDragAndDrop();
-        updateCheckButtonState();
-        setupOutputLinks();
-        inputEditor.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !checkBtn.disabled) checkGrammar(); });
+        if (getEditorText() === '') {
+            inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
+        }
         
-        console.log('[系统] 已支持：拍照识别 / 文件上传 / 拖拽上传 / PDF解析');
+        console.log('[DMX统计] 统计功能已启用，每次语法检查将静默记录使用量');
     </script>
 </body>
 </html>
