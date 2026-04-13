@@ -126,10 +126,20 @@
             color: #999;
         }
 
-        /* 高亮标记样式 - 用mark标签实现 */
-        .inputEditor mark {
+        /* LanguageTool 高亮标记样式 - 蓝色 */
+        .inputEditor mark.lt-highlight {
             background-color: rgba(59, 232, 255, 0.4);
-            border-bottom: 2px solid #57d1ea;
+            border-bottom: 2px solid #3bc0c6;
+            color: inherit;
+            padding: 0;
+            margin: 0;
+            border-radius: 2px;
+        }
+        
+        /* DMX 高亮标记样式 - 黄色（进阶提示） */
+        .inputEditor mark.dmx-highlight {
+            background-color: rgba(255, 243, 176, 0.7);
+            border-bottom: 2px solid #ffc107;
             color: inherit;
             padding: 0;
             margin: 0;
@@ -388,7 +398,7 @@
 
         /* ========== 模块8: 页脚样式 ========== */
         .bottom-page {
-            margin-top: auto;
+            margin-top: 0px;
             padding: 20px;
             background: transparent;
             border-top: 2px solid #c2e4fa;
@@ -403,7 +413,7 @@
         }
 
         .footer-link {
-            color: #333;
+            color: #424851;
             text-decoration: none;
             background: #b0d9ff;
             padding: 5px 10px;
@@ -426,6 +436,13 @@
 
         .credit-link:hover {
             text-decoration: underline;
+        }
+
+        /* 追加内容分隔线 */
+        .additional-tips {
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 2px dashed #ffc107;
         }
 
         /* ========== 响应式 ========== */
@@ -574,9 +591,9 @@
     <div class="bottom-page">
         <div class="footer-links">
             <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html" class="footer-link">使用帮助</a>
-            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html" target="_blank" class="footer-link">常见问题</a>
-            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/about.html" target="_blank" class="footer-link">关于我们</a>
-            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/problem.html" target="_blank" class="footer-link">反馈问题</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/help.html" class="footer-link">常见问题</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/about.html" class="footer-link">关于我们</a>
+            <a href="https://pbl-grammardetector.github.io/Grammar-Detector/problem.html" class="footer-link">反馈问题</a>
         </div>
         <div class="credit-links">
             <a href="https://languagetool.org" class="credit-link" target="_blank" rel="noopener">语法检测技术由 LanguageTool 提供</a>
@@ -585,7 +602,7 @@
     
     <input type="file" id="fileInput" accept=".txt,.md,.text/plain" hidden>
     
-    <script>
+<script>
         // ========== DOM 元素引用 ==========
         const inputEditor = document.getElementById('inputEditor');
         const outputDiv = document.getElementById('outputText');
@@ -599,14 +616,16 @@
         const API_URL = 'https://api.languagetool.org/v2/check';
         const MAX_BYTES = 20000;
         
-        // ========== DMX API 统计配置（静默调用） ==========
+        // ========== DMX API 配置 ==========
         const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
         const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';
         
-        let dmxCallCount = 0;
-
         // ========== 全局变量 ==========
-        let lastErrorMatches = [];
+        let lastLTMatches = [];
+        let lastDMXMatches = [];
+        let firstResultShown = false;
+        let currentLTData = null;
+        let currentDMXAnalysis = null;
 
         function getEditorText() {
             const clone = inputEditor.cloneNode(true);
@@ -624,54 +643,6 @@
 
         function setEditorHTML(html) {
             inputEditor.innerHTML = html;
-        }
-
-        async function silentDMXStatistics() {
-            if (!DMX_API_KEY || DMX_API_KEY === 'sk-你的实际令牌') {
-                console.log('[DMX统计] 未配置有效令牌，跳过统计');
-                return;
-            }
-            
-            try {
-                const testMessage = {
-                    model: "GLM-4.1V-Thinking-Flash",
-                    messages: [
-                        { role: "user", content: "test" }
-                    ],
-                    max_tokens: 1,
-                    stream: false
-                };
-                
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                
-                const response = await fetch(DMX_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${DMX_API_KEY}`
-                    },
-                    body: JSON.stringify(testMessage),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                dmxCallCount++;
-                console.log(`[DMX统计] API调用成功，本次语法检查已计入统计。总调用次数: ${dmxCallCount}`);
-                
-                const usageRemaining = response.headers.get('X-RateLimit-Remaining');
-                if (usageRemaining) {
-                    console.log(`[DMX统计] 剩余配额: ${usageRemaining}`);
-                }
-                
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    console.log('[DMX统计] 请求超时，但调用已记录');
-                } else {
-                    console.log('[DMX统计] 调用失败（不影响语法检测）:', error.message);
-                }
-            }
         }
 
         function getWritingStats(text) {
@@ -694,13 +665,13 @@
         }
         
         function getStatsText(stats) {
-            return '📊 【写作分析统计指标】\n' +
-                `   📝 总词数：${stats.totalWords} 词\n` +
-                `   🔤 总字符数（不含空格）：${stats.totalChars} 字符\n` +
-                `   📖 句子数：${stats.sentenceCount} 句\n` +
-                `   📏 平均句长：${stats.avgSentenceLength} 词/句\n` +
-                `   🌈 词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
-                `   ⭐ 不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
+            return '【写作分析统计指标】\n' +
+                `    总词数：${stats.totalWords} 词\n` +
+                `    总字符数（不含空格）：${stats.totalChars} 字符\n` +
+                `    句子数：${stats.sentenceCount} 句\n` +
+                `    平均句长：${stats.avgSentenceLength} 词/句\n` +
+                `    词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
+                `    不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
         }
 
         const knowledgeBase = {
@@ -791,6 +762,7 @@
         };
 
         function getByteLength(str) { return new Blob([str]).size; }
+        
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -798,29 +770,29 @@
             return div.innerHTML;
         }
 
-        function highlightErrorsInText(text, matches) {
-            if (!matches || matches.length === 0) return escapeHtml(text);
-            
+        // 合并高亮：蓝色优先（LanguageTool），黄色补充（DMX）
+        function mergeHighlights(text, ltMatches, dmxMatches) {
             const highlights = [];
-            for (const match of matches) {
-                let globalOffset = match.offset;
-                let globalLength = match.length;
-                if (globalOffset !== undefined && globalLength !== undefined && 
-                    globalOffset >= 0 && globalOffset + globalLength <= text.length) {
-                    highlights.push({ start: globalOffset, end: globalOffset + globalLength, message: match.message, replacements: match.replacements || [] });
-                } else if (match.context?.text) {
-                    const context = match.context.text;
-                    const offset = match.context.offset || 0;
-                    const length = match.context.length || 0;
-                    const searchText = context.substring(offset, offset + length);
-                    if (searchText && searchText.length > 0) {
-                        let idx = text.indexOf(searchText);
-                        if (idx !== -1) {
-                            highlights.push({ start: idx, end: idx + searchText.length, message: match.message, replacements: match.replacements || [] });
-                        }
-                    }
+            
+            // 添加 LanguageTool 高亮（蓝色，优先级高）
+            for (const match of ltMatches) {
+                let start = match.offset;
+                let end = match.offset + match.length;
+                if (start !== undefined && end !== undefined) {
+                    highlights.push({ start, end, source: 'lt', priority: 1, message: match.message, replacements: match.replacements });
                 }
             }
+            
+            // 添加 DMX 高亮（黄色，优先级低）
+            for (const match of dmxMatches) {
+                let start = match.start;
+                let end = match.end;
+                if (start !== undefined && end !== undefined) {
+                    highlights.push({ start, end, source: 'dmx', priority: 2, message: match.message, replacements: match.replacements });
+                }
+            }
+            
+            if (highlights.length === 0) return escapeHtml(text);
             
             highlights.sort((a, b) => a.start - b.start);
             
@@ -830,10 +802,9 @@
                     merged.push({ ...h });
                 } else {
                     const last = merged[merged.length - 1];
-                    if (h.start <= last.end) {
-                        last.end = Math.max(last.end, h.end);
-                        if (last.message !== h.message) {
-                            last.message = last.message + '; ' + h.message;
+                    if (h.start < last.end) {
+                        if (h.priority < last.priority) {
+                            merged[merged.length - 1] = { ...h };
                         }
                     } else {
                         merged.push({ ...h });
@@ -849,14 +820,14 @@
                 }
                 const errorText = text.substring(h.start, h.end);
                 let titleText = h.message;
-                if (titleText.length > 150) {
+                if (titleText && titleText.length > 150) {
                     titleText = titleText.substring(0, 150) + '...';
                 }
-                if (h.replacements && h.replacements.length > 0) {
-                    const suggestions = h.replacements.slice(0, 3).map(r => r.value).join('、');
-                    titleText += `\n建议修改为: ${suggestions}`;
+                if (h.replacements && h.replacements.length > 0 && h.replacements[0].value) {
+                    titleText += `\n建议修改为: ${h.replacements[0].value}`;
                 }
-                result += `<mark title="${escapeHtml(titleText)}">${escapeHtml(errorText)}</mark>`;
+                const cssClass = h.source === 'lt' ? 'lt-highlight' : 'dmx-highlight';
+                result += `<mark class="${cssClass}" title="${escapeHtml(titleText || '')}">${escapeHtml(errorText)}</mark>`;
                 currentPos = h.end;
             }
             if (currentPos < text.length) {
@@ -867,14 +838,14 @@
         
         function updateHighlight() {
             const text = getEditorText();
-            if (!lastErrorMatches || lastErrorMatches.length === 0 || !text.trim()) {
+            if ((!lastLTMatches || lastLTMatches.length === 0) && (!lastDMXMatches || lastDMXMatches.length === 0) || !text.trim()) {
                 const plainHtml = escapeHtml(text);
                 if (inputEditor.innerHTML !== plainHtml) {
                     inputEditor.innerHTML = plainHtml;
                 }
                 return;
             }
-            const highlightedHtml = highlightErrorsInText(text, lastErrorMatches);
+            const highlightedHtml = mergeHighlights(text, lastLTMatches, lastDMXMatches);
             if (inputEditor.innerHTML !== highlightedHtml) {
                 inputEditor.innerHTML = highlightedHtml;
             }
@@ -1024,7 +995,8 @@
             /pronoun ['‘](I|He|She|It|We|You|They)['’] (is|are|was|were|should be|must be|is usually|is often) used with/i,
             /third-person (singular )?verb/i,
             /subject-verb agreement/i,
-            /agreement: (subject|verb)/i
+            /agreement: (subject|verb)/i,
+            /(agreement error)/i
         ];
         function isSubjectVerbAgreement(msg) { return subjectVerbAgreementPatterns.some(p => p.test(msg)); }
         const articleUsagePatterns = [
@@ -1043,13 +1015,45 @@
             return '语法问题';
         }
 
-        function formatResult(data, originalText) {
-            lastErrorMatches = data.matches || [];
+        // 转换 DMX 结果为 matches 格式（用于高亮）
+        function convertDMXToMatches(dmxData, originalText) {
+            const matches = [];
+            if (!dmxData.errors || dmxData.errors.length === 0) return matches;
+            
+            for (const err of dmxData.errors) {
+                const fragment = err.original_sentence_fragment || '';
+                if (!fragment) continue;
+                
+                let idx = originalText.indexOf(fragment);
+                if (idx === -1) {
+                    const regex = new RegExp(`\\b${fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                    const match = originalText.match(regex);
+                    if (match) {
+                        idx = match.index;
+                    }
+                }
+                
+                if (idx !== -1) {
+                    matches.push({
+                        start: idx,
+                        end: idx + fragment.length,
+                        message: err.explanation || err.error_type || '语法问题',
+                        replacements: [{ value: err.suggestion || '' }],
+                        source: 'dmx'
+                    });
+                }
+            }
+            return matches;
+        }
+
+        // 格式化 LanguageTool 结果（返回 HTML）
+        function formatLTResult(data, originalText) {
+            lastLTMatches = data.matches || [];
             const stats = getWritingStats(originalText);
             let result = getStatsText(stats);
             
             if (!data.matches || data.matches.length === 0) {
-                result += "✨ 未发现语法或拼写问题\n（时态等部分语法问题暂时无法检测）";
+                result += "✨ 未发现语法或拼写问题\n";
                 clearKnowledgeCards();
                 return result;
             }
@@ -1082,6 +1086,89 @@
             return result;
         }
 
+        // 格式化 DMX 追加内容
+        function formatDMXAppend(dmxData) {
+            if (!dmxData || !dmxData.errors || dmxData.errors.length === 0) {
+                return '';
+            }
+            
+            let result = '\n\n' + '─'.repeat(40) + '\n✨ 进阶提示：\n';
+            for (let i = 0; i < Math.min(dmxData.errors.length, 5); i++) {
+                const err = dmxData.errors[i];
+                result += `\n${i+1}. ${escapeHtml(err.explanation || '语法问题')}\n`;
+                if (err.suggestion) {
+                    result += `   💡 建议：${escapeHtml(err.suggestion)}\n`;
+                }
+            }
+            if (dmxData.summary) {
+                result += `\n📝 ${escapeHtml(dmxData.summary)}`;
+            }
+            return result;
+        }
+
+        // 调用 DMX API 获取进阶分析
+        async function callDMXAPI(text) {
+            if (!DMX_API_KEY) {
+                console.log('[DMX] 未配置有效令牌');
+                return null;
+            }
+            
+            const systemPrompt = `You are a helpful English grammar assistant. Analyze the text and return ONLY valid JSON with this format:
+{
+  "errors": [
+    {
+      "original_sentence_fragment": "the exact problematic word or phrase",
+      "error_type": "grammar|spelling|punctuation|style|word_choice",
+      "explanation": "brief explanation of what is wrong",
+      "suggestion": "corrected version"
+    }
+  ],
+  "summary": "one sentence overall feedback"
+}
+If no errors, return "errors": [].
+Return ONLY JSON, no other text.`;
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+                
+                const response = await fetch(DMX_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DMX_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: `Please check this English text: ${text.substring(0, 3000)}` }
+                        ],
+                        temperature: 0.2
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    console.log('[DMX] API 错误:', response.status);
+                    return null;
+                }
+                
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                const jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    return JSON.parse(jsonMatch[0]);
+                }
+                return null;
+            } catch (error) {
+                console.log('[DMX] 调用失败:', error.message);
+                return null;
+            }
+        }
+
         function setupOutputLinks() {
             outputDiv.addEventListener('click', (e) => {
                 const link = e.target.closest('.issue-type-link');
@@ -1093,32 +1180,153 @@
             });
         }
 
-        function showError(msg) { outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}`; lastErrorMatches = []; updateHighlight(); clearKnowledgeCards(); }
-        function updateCheckButtonState() { const has = getEditorText().trim().length > 0; checkBtn.disabled = !has; checkBtn.classList.toggle('button-disabled', !has); checkBtn.classList.toggle('button-enabled', has); }
-        function resetAll() { setEditorText(''); outputDiv.innerHTML = '语法检查结果将显示在这里...'; lastErrorMatches = []; updateHighlight(); updateCheckButtonState(); clearKnowledgeCards(); }
+        function showError(msg) { 
+            outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}`; 
+            lastLTMatches = []; 
+            lastDMXMatches = [];
+            updateHighlight(); 
+            clearKnowledgeCards(); 
+        }
         
+        function updateCheckButtonState() { 
+            const has = getEditorText().trim().length > 0; 
+            checkBtn.disabled = !has; 
+            checkBtn.classList.toggle('button-disabled', !has); 
+            checkBtn.classList.toggle('button-enabled', has); 
+        }
+        
+        function resetAll() { 
+            setEditorText(''); 
+            outputDiv.innerHTML = '语法检查结果将显示在这里...'; 
+            lastLTMatches = []; 
+            lastDMXMatches = [];
+            updateHighlight(); 
+            updateCheckButtonState(); 
+            clearKnowledgeCards(); 
+            firstResultShown = false;
+        }
+        
+        // 赛跑模式主函数
         async function checkGrammar() {
             const text = getEditorText();
             if (!text.trim()) return showError("请输入待检测的文本");
             if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 ≤ 20KB`);
             
-            silentDMXStatistics();
+            checkBtn.disabled = true;
+            const originalText = checkBtn.innerText;
+            checkBtn.innerText = '检查中...';
+            outputDiv.innerHTML = '正在分析语法...';
+            lastLTMatches = [];
+            lastDMXMatches = [];
+            updateHighlight();
+            clearKnowledgeCards();
+            firstResultShown = false;
+            currentLTData = null;
+            currentDMXAnalysis = null;
             
-            checkBtn.disabled = true; const originalText = checkBtn.innerText; checkBtn.innerText = '检查中...';
-            outputDiv.innerHTML = '正在分析语法...'; lastErrorMatches = []; updateHighlight(); clearKnowledgeCards();
-            try {
-                const params = new URLSearchParams(); params.append('text', text); params.append('language', 'en'); params.append('enabledOnly', 'false');
-                const resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
-                if (!resp.ok) throw new Error(`API ${resp.status}`);
-                const data = await resp.json();
-                outputDiv.innerHTML = formatResult(data, text);
-                setupOutputLinks();
-                updateHighlight();
-            } catch (err) { showError(err.message || '网络异常'); } 
-            finally { checkBtn.innerText = originalText; updateCheckButtonState(); }
+            // 发起两个请求
+            const ltPromise = (async () => {
+                try {
+                    const params = new URLSearchParams();
+                    params.append('text', text);
+                    params.append('language', 'en');
+                    params.append('enabledOnly', 'false');
+                    const resp = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params
+                    });
+                    if (!resp.ok) throw new Error(`LanguageTool ${resp.status}`);
+                    const data = await resp.json();
+                    return { type: 'lt', data: data };
+                } catch (err) {
+                    return { type: 'lt', error: err.message };
+                }
+            })();
+            
+            const dmxPromise = (async () => {
+                try {
+                    const dmxResult = await callDMXAPI(text);
+                    return { type: 'dmx', data: dmxResult };
+                } catch (err) {
+                    return { type: 'dmx', error: err.message };
+                }
+            })();
+            
+            // 赛跑：谁先返回就显示谁
+            const first = await Promise.race([ltPromise, dmxPromise]);
+            
+            if (first.type === 'lt') {
+                if (first.error) {
+                    outputDiv.innerHTML = `LanguageTool 检测失败：${escapeHtml(first.error)}`;
+                } else {
+                    const ltResult = formatLTResult(first.data, text);
+                    outputDiv.innerHTML = ltResult;
+                    setupOutputLinks();
+                    currentLTData = first.data;
+                    lastLTMatches = first.data.matches || [];
+                    lastDMXMatches = [];
+                    updateHighlight();
+                    firstResultShown = true;
+                }
+            } else if (first.type === 'dmx') {
+                if (first.data && first.data.errors) {
+                    const dmxMatches = convertDMXToMatches(first.data, text);
+                    lastDMXMatches = dmxMatches;
+                    lastLTMatches = [];
+                    updateHighlight();
+                    currentDMXAnalysis = first.data;
+                    let dmxContent = '【AI 智能分析】\n';
+                    if (first.data.errors && first.data.errors.length > 0) {
+                        dmxContent += `发现 ${first.data.errors.length} 个需要关注的表达问题：\n\n`;
+                        for (let i = 0; i < first.data.errors.length; i++) {
+                            const err = first.data.errors[i];
+                            dmxContent += `${i+1}. ${escapeHtml(err.explanation || '语法问题')}\n`;
+                            if (err.suggestion) dmxContent += `   建议：${escapeHtml(err.suggestion)}\n`;
+                            dmxContent += `   ───────────────────────────────\n`;
+                        }
+                    } else {
+                        dmxContent += '✨ 未发现需要特别关注的语法问题。\n';
+                    }
+                    if (first.data.summary) {
+                        dmxContent += `\n📝 ${escapeHtml(first.data.summary)}`;
+                    }
+                    outputDiv.innerHTML = dmxContent;
+                    firstResultShown = true;
+                } else {
+                    outputDiv.innerHTML = '正在分析...（LanguageTool 即将显示结果）';
+                }
+            }
+            
+            // 等待另一个结果并追加
+            const second = await Promise.allSettled([ltPromise, dmxPromise]);
+            for (const result of second) {
+                if (result.status === 'fulfilled') {
+                    const res = result.value;
+                    if (res.type === 'lt' && !res.error && first.type !== 'lt') {
+                        const ltResult = formatLTResult(res.data, text);
+                        const currentContent = outputDiv.innerHTML;
+                        outputDiv.innerHTML = currentContent + '\n\n' + '─'.repeat(50) + '\n\n【LanguageTool 详细检测】\n' + ltResult;
+                        setupOutputLinks();
+                        lastLTMatches = res.data.matches || [];
+                        updateHighlight();
+                    } else if (res.type === 'dmx' && res.data && first.type !== 'dmx') {
+                        const dmxAppend = formatDMXAppend(res.data);
+                        const currentContent = outputDiv.innerHTML;
+                        outputDiv.innerHTML = currentContent + dmxAppend;
+                        const newDMXMatches = convertDMXToMatches(res.data, text);
+                        lastDMXMatches = newDMXMatches;
+                        updateHighlight();
+                    }
+                }
+            }
+            
+            checkBtn.innerText = originalText;
+            updateCheckButtonState();
         }
         
         function triggerFileUpload() { fileInput.click(); }
+        
         function handleFileSelect(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1126,11 +1334,13 @@
             const reader = new FileReader();
             reader.onload = (ev) => { 
                 setEditorText(ev.target.result); 
-                lastErrorMatches = []; 
+                lastLTMatches = []; 
+                lastDMXMatches = [];
                 updateHighlight(); 
                 outputDiv.innerHTML = '语法检查结果将显示在这里...'; 
                 clearKnowledgeCards(); 
                 updateCheckButtonState();
+                firstResultShown = false;
             };
             reader.readAsText(file, 'UTF-8');
             fileInput.value = '';
@@ -1140,10 +1350,12 @@
         uploadBtn.addEventListener('click', triggerFileUpload);
         resetBtn.addEventListener('click', resetAll);
         inputEditor.addEventListener('input', () => { 
-            if(lastErrorMatches.length) { 
-                lastErrorMatches = []; 
+            if(lastLTMatches.length || lastDMXMatches.length) { 
+                lastLTMatches = []; 
+                lastDMXMatches = [];
                 updateHighlight(); 
                 clearKnowledgeCards(); 
+                firstResultShown = false;
             } 
             updateCheckButtonState(); 
         });
@@ -1163,7 +1375,7 @@
             inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
         }
         
-        console.log('[DMX统计] 统计功能已启用，每次语法检查将静默记录使用量');
+        console.log('[DMX] 增强模式已启用，赛跑模式运行中');
     </script>
 </body>
 </html>
