@@ -290,6 +290,22 @@
             font-size: 13px;
         }
 
+        .back-to-top-btn {
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: background-color 0.2s;
+        }
+
+        .back-to-top-btn:hover {
+            background-color: #0056b3;
+        }
+
         /* 练习题样式 */
         .exercise-section {
             margin-top: 20px;
@@ -616,11 +632,9 @@
         const API_URL = 'https://api.languagetool.org/v2/check';
         const MAX_BYTES = 20000;
         
-        // ========== DMX API 配置 ==========
         const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
         const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';
         
-        // ========== 全局变量 ==========
         let lastLTMatches = [];
         let lastDMXMatches = [];
         let firstResultShown = false;
@@ -770,11 +784,9 @@
             return div.innerHTML;
         }
 
-        // 合并高亮：蓝色优先（LanguageTool），黄色补充（DMX）
         function mergeHighlights(text, ltMatches, dmxMatches) {
             const highlights = [];
             
-            // 添加 LanguageTool 高亮（蓝色，优先级高）
             for (const match of ltMatches) {
                 let start = match.offset;
                 let end = match.offset + match.length;
@@ -783,7 +795,6 @@
                 }
             }
             
-            // 添加 DMX 高亮（黄色，优先级低）
             for (const match of dmxMatches) {
                 let start = match.start;
                 let end = match.end;
@@ -912,6 +923,7 @@
                     <div class="knowledge-card" id="${cardId}" data-card-type="${type}">
                         <div class="card-type">${escapeHtml(type)}</div>
                         <h3>${knowledge.title}</h3>
+                        <button class="back-to-top-btn">返回顶部</button>
                         <div class="card-content">${knowledge.content}</div>
                         <div class="example">${exampleHtml}</div>
                         ${exercisesHtml}
@@ -927,6 +939,11 @@
             document.querySelectorAll('.check-answer-btn').forEach(btn => {
                 btn.removeEventListener('click', handleCheckAnswer);
                 btn.addEventListener('click', handleCheckAnswer);
+            });
+            document.querySelectorAll('.back-to-top-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
             });
         }
         
@@ -1015,7 +1032,6 @@
             return '语法问题';
         }
 
-        // 转换 DMX 结果为 matches 格式（用于高亮）
         function convertDMXToMatches(dmxData, originalText) {
             const matches = [];
             if (!dmxData.errors || dmxData.errors.length === 0) return matches;
@@ -1046,11 +1062,9 @@
             return matches;
         }
 
-        // 格式化 LanguageTool 结果（返回 HTML）
         function formatLTResult(data, originalText) {
             lastLTMatches = data.matches || [];
-            const stats = getWritingStats(originalText);
-            let result = getStatsText(stats);
+            let result = '';
             
             if (!data.matches || data.matches.length === 0) {
                 result += "✨ 未发现语法或拼写问题\n";
@@ -1086,19 +1100,22 @@
             return result;
         }
 
-        // 格式化 DMX 追加内容
-        function formatDMXAppend(dmxData) {
-            if (!dmxData || !dmxData.errors || dmxData.errors.length === 0) {
+        // 格式化 DMX 详细错误（用于追加显示）
+        function formatDMXDetails(dmxData) {
+            if (!dmxData.errors || dmxData.errors.length === 0) {
                 return '';
             }
             
-            let result = '\n\n' + '─'.repeat(40) + '\n✨ 进阶提示：\n';
-            for (let i = 0; i < Math.min(dmxData.errors.length, 5); i++) {
+            let result = '';
+            for (let i = 0; i < dmxData.errors.length; i++) {
                 const err = dmxData.errors[i];
-                result += `\n${i+1}. ${escapeHtml(err.explanation || '语法问题')}\n`;
+                result += `${i+1}. 问题位置: "${escapeHtml(err.original_sentence_fragment || '未知')}"\n`;
+                result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
                 if (err.suggestion) {
-                    result += `   💡 建议：${escapeHtml(err.suggestion)}\n`;
+                    result += `   建议: ${escapeHtml(err.suggestion)}\n`;
                 }
+                result += `   类型: ${escapeHtml(err.error_type || '语法问题')}\n`;
+                result += `   ───────────────────────────────\n`;
             }
             if (dmxData.summary) {
                 result += `\n📝 ${escapeHtml(dmxData.summary)}`;
@@ -1106,7 +1123,28 @@
             return result;
         }
 
-        // 调用 DMX API 获取进阶分析
+        // 格式化 DMX 追加内容（简洁版）
+        function formatDMXAppend(dmxData) {
+            if (!dmxData.errors || dmxData.errors.length === 0) {
+                return '';
+            }
+            
+            let result = '\n\n' + '─'.repeat(40) + '\n✨ AI 进阶提示：\n\n';
+            for (let i = 0; i < dmxData.errors.length; i++) {
+                const err = dmxData.errors[i];
+                result += `${i+1}. 问题位置: "${escapeHtml(err.original_sentence_fragment || '未知')}"\n`;
+                result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
+                if (err.suggestion) {
+                    result += `   建议: ${escapeHtml(err.suggestion)}\n`;
+                }
+                result += `   ───────────────────────────────\n`;
+            }
+            if (dmxData.summary) {
+                result += `\n📝 ${escapeHtml(dmxData.summary)}`;
+            }
+            return result;
+        }
+
         async function callDMXAPI(text) {
             if (!DMX_API_KEY) {
                 console.log('[DMX] 未配置有效令牌');
@@ -1206,7 +1244,6 @@ Return ONLY JSON, no other text.`;
             firstResultShown = false;
         }
         
-        // 赛跑模式主函数
         async function checkGrammar() {
             const text = getEditorText();
             if (!text.trim()) return showError("请输入待检测的文本");
@@ -1224,7 +1261,11 @@ Return ONLY JSON, no other text.`;
             currentLTData = null;
             currentDMXAnalysis = null;
             
-            // 发起两个请求
+            let ltFinished = false;
+            let dmxFinished = false;
+            let ltData = null;
+            let dmxData = null;
+            
             const ltPromise = (async () => {
                 try {
                     const params = new URLSearchParams();
@@ -1238,88 +1279,71 @@ Return ONLY JSON, no other text.`;
                     });
                     if (!resp.ok) throw new Error(`LanguageTool ${resp.status}`);
                     const data = await resp.json();
-                    return { type: 'lt', data: data };
+                    ltData = data;
+                    ltFinished = true;
+                    
+                    lastLTMatches = data.matches || [];
+                    updateHighlight();
+                    
+                    if (!dmxFinished) {
+                        const stats = getWritingStats(text);
+                        outputDiv.innerHTML = getStatsText(stats) + formatLTResult(data, text);
+                        setupOutputLinks();
+                    } else {
+                        const currentContent = outputDiv.innerHTML;
+                        outputDiv.innerHTML = currentContent + '\n\n' + '─'.repeat(50) + '\n\n📋 LanguageTool 详细检测：\n' + formatLTResult(data, text);
+                        setupOutputLinks();
+                    }
                 } catch (err) {
-                    return { type: 'lt', error: err.message };
+                    console.log('LT错误:', err);
+                    ltFinished = true;
+                    if (!dmxFinished) {
+                        outputDiv.innerHTML = 'LanguageTool 检测失败，正在等待 AI 结果...';
+                    }
                 }
             })();
             
             const dmxPromise = (async () => {
                 try {
-                    const dmxResult = await callDMXAPI(text);
-                    return { type: 'dmx', data: dmxResult };
+                    const result = await callDMXAPI(text);
+                    dmxData = result;
+                    dmxFinished = true;
+                    
+                    if (result && result.errors && result.errors.length > 0) {
+                        const dmxHighlights = convertDMXToMatches(result, text);
+                        lastDMXMatches = dmxHighlights;
+                        updateHighlight();
+                    }
+                    
+                    if (!ltFinished) {
+                        const stats = getWritingStats(text);
+                        let dmxOutput = getStatsText(stats);
+                        dmxOutput += '✨ AI 智能分析结果：\n\n';
+                        if (result && result.errors && result.errors.length > 0) {
+                            dmxOutput += formatDMXDetails(result);
+                        } else {
+                            dmxOutput += '✨ 未发现语法问题\n';
+                        }
+                        outputDiv.innerHTML = dmxOutput;
+                        setupOutputLinks();
+                    } else {
+                        const dmxAppend = formatDMXAppend(result);
+                        if (dmxAppend) {
+                            const currentContent = outputDiv.innerHTML;
+                            outputDiv.innerHTML = currentContent + dmxAppend;
+                            setupOutputLinks();
+                        }
+                    }
                 } catch (err) {
-                    return { type: 'dmx', error: err.message };
+                    console.log('DMX错误:', err);
+                    dmxFinished = true;
+                    if (!ltFinished) {
+                        outputDiv.innerHTML = 'AI 分析失败，正在等待 LanguageTool 结果...';
+                    }
                 }
             })();
             
-            // 赛跑：谁先返回就显示谁
-            const first = await Promise.race([ltPromise, dmxPromise]);
-            
-            if (first.type === 'lt') {
-                if (first.error) {
-                    outputDiv.innerHTML = `LanguageTool 检测失败：${escapeHtml(first.error)}`;
-                } else {
-                    const ltResult = formatLTResult(first.data, text);
-                    outputDiv.innerHTML = ltResult;
-                    setupOutputLinks();
-                    currentLTData = first.data;
-                    lastLTMatches = first.data.matches || [];
-                    lastDMXMatches = [];
-                    updateHighlight();
-                    firstResultShown = true;
-                }
-            } else if (first.type === 'dmx') {
-                if (first.data && first.data.errors) {
-                    const dmxMatches = convertDMXToMatches(first.data, text);
-                    lastDMXMatches = dmxMatches;
-                    lastLTMatches = [];
-                    updateHighlight();
-                    currentDMXAnalysis = first.data;
-                    let dmxContent = '【AI 智能分析】\n';
-                    if (first.data.errors && first.data.errors.length > 0) {
-                        dmxContent += `发现 ${first.data.errors.length} 个需要关注的表达问题：\n\n`;
-                        for (let i = 0; i < first.data.errors.length; i++) {
-                            const err = first.data.errors[i];
-                            dmxContent += `${i+1}. ${escapeHtml(err.explanation || '语法问题')}\n`;
-                            if (err.suggestion) dmxContent += `   建议：${escapeHtml(err.suggestion)}\n`;
-                            dmxContent += `   ───────────────────────────────\n`;
-                        }
-                    } else {
-                        dmxContent += '✨ 未发现需要特别关注的语法问题。\n';
-                    }
-                    if (first.data.summary) {
-                        dmxContent += `\n📝 ${escapeHtml(first.data.summary)}`;
-                    }
-                    outputDiv.innerHTML = dmxContent;
-                    firstResultShown = true;
-                } else {
-                    outputDiv.innerHTML = '正在分析...（LanguageTool 即将显示结果）';
-                }
-            }
-            
-            // 等待另一个结果并追加
-            const second = await Promise.allSettled([ltPromise, dmxPromise]);
-            for (const result of second) {
-                if (result.status === 'fulfilled') {
-                    const res = result.value;
-                    if (res.type === 'lt' && !res.error && first.type !== 'lt') {
-                        const ltResult = formatLTResult(res.data, text);
-                        const currentContent = outputDiv.innerHTML;
-                        outputDiv.innerHTML = currentContent + '\n\n' + '─'.repeat(50) + '\n\n【LanguageTool 详细检测】\n' + ltResult;
-                        setupOutputLinks();
-                        lastLTMatches = res.data.matches || [];
-                        updateHighlight();
-                    } else if (res.type === 'dmx' && res.data && first.type !== 'dmx') {
-                        const dmxAppend = formatDMXAppend(res.data);
-                        const currentContent = outputDiv.innerHTML;
-                        outputDiv.innerHTML = currentContent + dmxAppend;
-                        const newDMXMatches = convertDMXToMatches(res.data, text);
-                        lastDMXMatches = newDMXMatches;
-                        updateHighlight();
-                    }
-                }
-            }
+            await Promise.all([ltPromise, dmxPromise]);
             
             checkBtn.innerText = originalText;
             updateCheckButtonState();
@@ -1375,7 +1399,7 @@ Return ONLY JSON, no other text.`;
             inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
         }
         
-        console.log('[DMX] 增强模式已启用，赛跑模式运行中');
+        console.log('[DMX] 增强模式已启用');
     </script>
 </body>
 </html>
