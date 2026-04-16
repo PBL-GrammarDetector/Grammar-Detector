@@ -640,6 +640,7 @@
         let firstResultShown = false;
         let currentLTData = null;
         let currentDMXAnalysis = null;
+        let allIssueTypes = new Set(); // 收集所有问题类型
 
         function getEditorText() {
             const clone = inputEditor.cloneNode(true);
@@ -1013,9 +1014,20 @@
             /third-person (singular )?verb/i,
             /subject-verb agreement/i,
             /agreement: (subject|verb)/i,
-            /(agreement error)/i
+            /(agreement error)/i,
+            /should\s+be\s+followed\s+by\s+the\s+base\s+form\s+of\s+the\s+verb/i,
+            /base\s+form\s+of\s+the\s+verb/i,
+            /the\s+subject\s+['"‘“]?\w+['"’“]?\s+should\s+be\s+followed\s+by/i,
+            /\bI\b.*\bshould\b.*\bbase\b.*\bform\b.*\blike\b/i,
+            /should\s+agree\s+with\s+the\s+subject/i,
+            /\bagree\s+with\s+the\s+subject\b/i,
+            /\brequires?\s+['"‘“]?\w+['"’“]?\s+to\s+agree\s+with\s+the\s+subject/i,
+            /requires?\s+['"‘“]?[a-zA-Z]+['"’“]?\b.*\bto\s+agree\s+with/i,
+            /\bnot\s+['"‘“]?[a-zA-Z]+s['"’“]?/i,
+            /\b(subject|pronoun)\b.*\bshould\b.*\bbase\s+form\b/i
         ];
         function isSubjectVerbAgreement(msg) { return subjectVerbAgreementPatterns.some(p => p.test(msg)); }
+
         const articleUsagePatterns = [
             /use\W*["'‘“”]?(a|an)["'‘“”]?\W+instead\W+of\W+["'‘“”]?(a|an)["'‘“”]?/i,
             /article.*\b(a|an)\b.*vowel\s*sound/i,
@@ -1030,6 +1042,35 @@
             if (isModal) return '情态动词使用错误';
             if (match.rule?.category?.name) return match.rule.category.name;
             return '语法问题';
+        }
+
+        function getDMXIssueType(err) {
+            const type = err.error_type || '';
+            const explanation = err.explanation || '';
+            
+            // 检查主谓一致
+            if (isSubjectVerbAgreement(explanation)) return '主谓一致问题';
+            
+            // 检查冠词使用
+            if (isArticleUsageIssue(explanation)) return '冠词使用错误';
+            
+            // 检查情态动词
+            if (isModalUsageIssue(explanation)) return '情态动词使用错误';
+            
+            // 根据error_type映射
+            if (type === 'spelling') return '拼写问题';
+            if (type === 'punctuation') return '标点符号';
+            if (type === 'tense' || explanation.includes('时态') || explanation.includes('tense')) return '时态问题';
+            
+            // 其他grammar类型
+            if (type === 'grammar') {
+                if (explanation.includes('主谓') || explanation.includes('subject-verb')) return '主谓一致问题';
+                if (explanation.includes('冠词') || explanation.includes('article')) return '冠词使用错误';
+                if (explanation.includes('情态') || explanation.includes('modal')) return '情态动词使用错误';
+                if (explanation.includes('时态') || explanation.includes('tense')) return '时态问题';
+            }
+            
+            return '语法知识'; // 默认
         }
 
         function convertDMXToMatches(dmxData, originalText) {
@@ -1096,7 +1137,7 @@
                 result += `   ───────────────────────────────\n`;
             });
             result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
-            generateKnowledgeCards(issueTypesList);
+            issueTypesList.forEach(type => allIssueTypes.add(type));
             return result;
         }
 
@@ -1106,17 +1147,24 @@
                 return '';
             }
             
-            let result = '';
+            let result = `📋 AI 检测发现 ${dmxData.errors.length} 处语法问题：\n\n`;
+            const issueTypesList = [];
+            
             for (let i = 0; i < dmxData.errors.length; i++) {
                 const err = dmxData.errors[i];
+                const issueType = getDMXIssueType(err);
+                issueTypesList.push(issueType);
+                
                 result += `${i+1}. 问题位置: "${escapeHtml(err.original_sentence_fragment || '未知')}"\n`;
                 result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
                 if (err.suggestion) {
                     result += `   建议: ${escapeHtml(err.suggestion)}\n`;
                 }
-                result += `   类型: ${escapeHtml(err.error_type || '语法问题')}\n`;
+                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${i}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
                 result += `   ───────────────────────────────\n`;
             }
+            result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
+            issueTypesList.forEach(type => allIssueTypes.add(type));
             if (dmxData.summary) {
                 result += `\n📝 ${escapeHtml(dmxData.summary)}`;
             }
@@ -1130,15 +1178,23 @@
             }
             
             let result = '\n\n' + '─'.repeat(40) + '\n✨ AI 进阶提示：\n\n';
+            const issueTypesList = [];
+            
             for (let i = 0; i < dmxData.errors.length; i++) {
                 const err = dmxData.errors[i];
+                const issueType = getDMXIssueType(err);
+                issueTypesList.push(issueType);
+                
                 result += `${i+1}. 问题位置: "${escapeHtml(err.original_sentence_fragment || '未知')}"\n`;
                 result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
                 if (err.suggestion) {
                     result += `   建议: ${escapeHtml(err.suggestion)}\n`;
                 }
+                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${i}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
                 result += `   ───────────────────────────────\n`;
             }
+            result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
+            issueTypesList.forEach(type => allIssueTypes.add(type));
             if (dmxData.summary) {
                 result += `\n📝 ${escapeHtml(dmxData.summary)}`;
             }
@@ -1260,6 +1316,7 @@ Return ONLY JSON, no other text.`;
             firstResultShown = false;
             currentLTData = null;
             currentDMXAnalysis = null;
+            allIssueTypes.clear();
             
             let ltFinished = false;
             let dmxFinished = false;
@@ -1344,6 +1401,8 @@ Return ONLY JSON, no other text.`;
             })();
             
             await Promise.all([ltPromise, dmxPromise]);
+            
+            generateKnowledgeCards([...allIssueTypes]);
             
             checkBtn.innerText = originalText;
             updateCheckButtonState();
