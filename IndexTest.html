@@ -764,7 +764,7 @@
             },
             '默认': {
                 title: '💡 语法知识',
-                content: '注意检查句子的语法结构，确保表达清晰准确。可以参考语法书籍或在线资源学习。',
+                content: '此语法问题暂时没有对应的知识卡片，建议查阅相关语法书籍或在线资源进行学习。',
                 examples: ['建议查阅语法参考书', '多读多写提高语感', '注意句子结构的完整性'],
                 exercises: [
                     { question: "To improve grammar, you should ___ daily.", options: ["practice", "practices", "practicing"], answer: 0, feedback: "情态动词 should 后接动词原形 practice。" },
@@ -863,14 +863,102 @@
             }
         }
 
+        // ========== 语法错误类型映射配置 ==========
+        const errorTypeMappings = [
+            {
+                keywords: ['主谓一致', 'subject-verb agreement', 'subject verb agreement', 'third-person', 'singular verb', 'plural verb', 'agree with the subject'],
+                patterns: [
+                    /pronoun ['‘](I|He|She|It|We|You|They)['’] (is|are|was|were|should be|must be|is usually|is often) used with/i,
+                    /third-person (singular )?verb/i,
+                    /subject-verb agreement/i,
+                    /agreement: (subject|verb)/i,
+                    /(agreement error)/i,
+                    /should\s+be\s+followed\s+by\s+the\s+base\s+form\s+of\s+the\s+verb/i,
+                    /base\s+form\s+of\s+the\s+verb/i,
+                    /the\s+subject\s+['"‘“]?\w+['"’“]?\s+should\s+be\s+followed\s+by/i,
+                    /\bI\b.*\bshould\b.*\bbase\b.*\bform\b.*\blike\b/i,
+                    /should\s+agree\s+with\s+the\s+subject/i,
+                    /\bagree\s+with\s+the\s+subject\b/i,
+                    /\brequires?\s+['"‘“]?\w+['"’“]?\s+to\s+agree\s+with\s+the\s+subject/i,
+                    /requires?\s+['"‘“]?[a-zA-Z]+['"’“]?\b.*\bto\s+agree\s+with/i,
+                    /\bnot\s+['"‘“]?[a-zA-Z]+s['"’“]?/i,
+                    /\b(subject|pronoun)\b.*\bshould\b.*\bbase\s+form\b/i,
+                    /use\s+(a\s+)?(first|second|third)[-\s]?(person\s+)?(plural|singular)\s+verb\s+with\s+['"‘“]?\w+['"’“]?/i,
+                    /the\s+singular\s+proper\s+name\s+['"‘“]?\w+['"’“]?\s+must\s+be\s+used\s+with\s+(a\s+)?(third-person|past\s+tense)/i,
+                    /the\s+subject\s+['"‘“]?\w+['"’“]?\s+requires\s+the\s+(plural|singular)\s+form\s+of\s+the\s+verb\s+['"‘“]?to\s+be['"’“]?,\s+which\s+is\s+['"‘“]?\w+['"’“]?/i,
+                    /the\s+subject\s+['"‘“]?\w+['"’“]?\s+is\s+singular,\s+so\s+the\s+verb\s+should\s+be\s+['"‘“]?(is|was)['"’“]?/i,
+                    /the\s+subject\s+['"‘“]?\w+['"’“]?\s+is\s+singular,\s+so\s+the\s+verb\s+should\s+be\s+['"‘“]?\w+['"’“]?/i,
+                    /(the\s+subject\s+['"‘“]?\w+['"’“]?\s+is\s+singular|the\s+subject\s+['"‘“]?\w+['"’“]?\s+requires\s+the\s+(plural|singular)\s+form|the\s+singular\s+proper\s+name\s+['"‘“]?\w+['"’“]?\s+must\s+be\s+used\s+with|use\s+(a\s+)?(first|second|third)[-\s]?(person\s+)?(plural|singular)\s+verb\s+with)/i
+                ],
+                type: '主谓一致问题'
+            },
+            {
+                keywords: ['冠词', 'article', 'indefinite article', 'a an', 'use a instead', 'use an instead'],
+                patterns: [
+                    /use\W*["'‘“”]?(a|an)["'‘“”]?\W+instead\W+of\W+["'‘“”]?(a|an)["'‘“”]?/i,
+                    /article.*\b(a|an)\b.*vowel\s*sound/i,
+                    /indefinite\s+article/i
+                ],
+                type: '冠词使用错误'
+            },
+            {
+                keywords: ['时态', 'tense', 'past tense', 'present tense', 'future tense'],
+                patterns: [],
+                type: '时态问题'
+            },
+            {
+                keywords: ['拼写', 'spelling', 'misspelled', 'spelling error'],
+                patterns: [],
+                type: '拼写问题'
+            },
+            {
+                keywords: ['标点', 'punctuation', 'comma', 'period', 'question mark'],
+                patterns: [],
+                type: '标点符号'
+            },
+            {
+                keywords: ['情态', 'modal verb', 'base form', 'requires the base form', 'after must', 'after can', 'after may'],
+                patterns: [
+                    /modal\s+verb.*base\s+form/i,
+                    /requires?\s+the\s+base\s+form/i,
+                    /after\s+['"]?(must|can|could|may|might|will|would|shall|should)['"]?/i
+                ],
+                type: '情态动词使用错误'
+            }
+        ];
+
+        // ========== 知识卡片映射 ==========
+        const knowledgeCardMappings = {
+            '主谓一致问题': '主谓一致问题',
+            '冠词使用错误': '冠词使用错误',
+            '时态问题': '时态问题',
+            '拼写问题': '拼写问题',
+            '标点符号': '标点符号',
+            '情态动词使用错误': '情态动词使用错误'
+        };
+
+        // ========== 统一错误类型识别函数 ==========
+        function identifyErrorType(message, errorType = '') {
+            const fullText = (message + ' ' + errorType).toLowerCase();
+            
+            for (const mapping of errorTypeMappings) {
+                // 首先检查关键词匹配
+                if (mapping.keywords.some(keyword => fullText.includes(keyword.toLowerCase()))) {
+                    return mapping.type;
+                }
+                
+                // 然后检查正则表达式匹配
+                if (mapping.patterns && mapping.patterns.some(pattern => pattern.test(message))) {
+                    return mapping.type;
+                }
+            }
+            
+            return '语法知识'; // 默认类型
+        }
+
         function getKnowledgeForIssueType(issueType) {
-            if (issueType.includes('主谓一致')) return knowledgeBase['主谓一致问题'];
-            if (issueType.includes('冠词')) return knowledgeBase['冠词使用错误'];
-            if (issueType.includes('时态') || issueType.includes('Tense')) return knowledgeBase['时态问题'];
-            if (issueType.includes('拼写') || issueType.includes('Spelling')) return knowledgeBase['拼写问题'];
-            if (issueType.includes('标点') || issueType.includes('Punctuation')) return knowledgeBase['标点符号'];
-            if (issueType.includes('情态')) return knowledgeBase['情态动词使用错误'];
-            return knowledgeBase['默认'];
+            const cardKey = knowledgeCardMappings[issueType] || '默认';
+            return knowledgeBase[cardKey] || knowledgeBase['默认'];
         }
 
         function renderExercises(exercises, cardUniqueId) {
@@ -1009,68 +1097,12 @@
             }
         }
 
-        const subjectVerbAgreementPatterns = [
-            /pronoun ['‘](I|He|She|It|We|You|They)['’] (is|are|was|were|should be|must be|is usually|is often) used with/i,
-            /third-person (singular )?verb/i,
-            /subject-verb agreement/i,
-            /agreement: (subject|verb)/i,
-            /(agreement error)/i,
-            /should\s+be\s+followed\s+by\s+the\s+base\s+form\s+of\s+the\s+verb/i,
-            /base\s+form\s+of\s+the\s+verb/i,
-            /the\s+subject\s+['"‘“]?\w+['"’“]?\s+should\s+be\s+followed\s+by/i,
-            /\bI\b.*\bshould\b.*\bbase\b.*\bform\b.*\blike\b/i,
-            /should\s+agree\s+with\s+the\s+subject/i,
-            /\bagree\s+with\s+the\s+subject\b/i,
-            /\brequires?\s+['"‘“]?\w+['"’“]?\s+to\s+agree\s+with\s+the\s+subject/i,
-            /requires?\s+['"‘“]?[a-zA-Z]+['"’“]?\b.*\bto\s+agree\s+with/i,
-            /\bnot\s+['"‘“]?[a-zA-Z]+s['"’“]?/i,
-            /\b(subject|pronoun)\b.*\bshould\b.*\bbase\s+form\b/i
-        ];
-        function isSubjectVerbAgreement(msg) { return subjectVerbAgreementPatterns.some(p => p.test(msg)); }
-
-        const articleUsagePatterns = [
-            /use\W*["'‘“”]?(a|an)["'‘“”]?\W+instead\W+of\W+["'‘“”]?(a|an)["'‘“”]?/i,
-            /article.*\b(a|an)\b.*vowel\s*sound/i,
-            /indefinite\s+article/i
-        ];
-        function isArticleUsageIssue(msg) { return articleUsagePatterns.some(p => p.test(msg)); }
-        const modalVerbPatterns = [/modal\s+verb.*base\s+form/i, /requires?\s+the\s+base\s+form/i, /after\s+['"]?(must|can|could|may|might|will|would|shall|should)['"]?/i];
-        function isModalUsageIssue(msg) { return modalVerbPatterns.some(p => p.test(msg)); }
         function getIssueType(match, isAgree, isArt, isModal) {
-            if (isAgree) return '主谓一致问题';
-            if (isArt) return '冠词使用错误';
-            if (isModal) return '情态动词使用错误';
-            if (match.rule?.category?.name) return match.rule.category.name;
-            return '语法问题';
+            return identifyErrorType(match.message || '', match.rule?.category?.name || '');
         }
 
         function getDMXIssueType(err) {
-            const type = err.error_type || '';
-            const explanation = err.explanation || '';
-            
-            // 检查主谓一致
-            if (isSubjectVerbAgreement(explanation)) return '主谓一致问题';
-            
-            // 检查冠词使用
-            if (isArticleUsageIssue(explanation)) return '冠词使用错误';
-            
-            // 检查情态动词
-            if (isModalUsageIssue(explanation)) return '情态动词使用错误';
-            
-            // 根据error_type映射
-            if (type === 'spelling') return '拼写问题';
-            if (type === 'punctuation') return '标点符号';
-            if (type === 'tense' || explanation.includes('时态') || explanation.includes('tense')) return '时态问题';
-            
-            // 其他grammar类型
-            if (type === 'grammar') {
-                if (explanation.includes('主谓') || explanation.includes('subject-verb')) return '主谓一致问题';
-                if (explanation.includes('冠词') || explanation.includes('article')) return '冠词使用错误';
-                if (explanation.includes('情态') || explanation.includes('modal')) return '情态动词使用错误';
-                if (explanation.includes('时态') || explanation.includes('tense')) return '时态问题';
-            }
-            
-            return '语法知识'; // 默认
+            return identifyErrorType(err.explanation || '', err.error_type || '');
         }
 
         function convertDMXToMatches(dmxData, originalText) {
@@ -1078,7 +1110,7 @@
             if (!dmxData.errors || dmxData.errors.length === 0) return matches;
             
             for (const err of dmxData.errors) {
-                const fragment = err.original_sentence_fragment || '';
+                const fragment = err.original_fragment || '';
                 if (!fragment) continue;
                 
                 let idx = originalText.indexOf(fragment);
@@ -1121,17 +1153,11 @@
                 const off = match.context?.offset || 0;
                 const len = match.context?.length || 0;
                 const errorWord = ctx.substring(off, off+len);
-                const isAgree = isSubjectVerbAgreement(match.message);
-                const isArt = isArticleUsageIssue(match.message);
-                const isModal = isModalUsageIssue(match.message);
-                const issueType = getIssueType(match, isAgree, isArt, isModal);
+                const issueType = identifyErrorType(match.message || '', match.rule?.category?.name || '');
                 issueTypesList.push(issueType);
                 
                 result += `${idx+1}. 问题位置: "${escapeHtml(errorWord || '未知')}"\n`;
-                if (isAgree) result += `   说明: 主谓一致问题\n`;
-                else if (isArt) result += `   说明: 冠词使用错误\n`;
-                else if (isModal) result += `   说明: 情态动词使用错误 - 动词应保持原形\n`;
-                else result += `   说明: ${escapeHtml(match.message)}\n`;
+                result += `   说明: ${escapeHtml(match.message)}\n`;
                 if (match.replacements?.length) result += `   建议: ${match.replacements.slice(0,5).map(r=>r.value).join('、')}\n`;
                 result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${idx}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
                 result += `   ───────────────────────────────\n`;
@@ -1155,7 +1181,7 @@
                 const issueType = getDMXIssueType(err);
                 issueTypesList.push(issueType);
                 
-                result += `${i+1}. 问题位置: "${escapeHtml(err.original_sentence_fragment || '未知')}"\n`;
+                result += `${i+1}. 问题位置: "${escapeHtml(err.original_fragment || '未知')}"\n`;
                 result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
                 if (err.suggestion) {
                     result += `   建议: ${escapeHtml(err.suggestion)}\n`;
@@ -1185,7 +1211,7 @@
                 const issueType = getDMXIssueType(err);
                 issueTypesList.push(issueType);
                 
-                result += `${i+1}. 问题位置: "${escapeHtml(err.original_sentence_fragment || '未知')}"\n`;
+                result += `${i+1}. 问题位置: "${escapeHtml(err.original_fragment || '未知')}"\n`;
                 result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
                 if (err.suggestion) {
                     result += `   建议: ${escapeHtml(err.suggestion)}\n`;
@@ -1207,20 +1233,20 @@
                 return null;
             }
             
-            const systemPrompt = `You are a helpful English grammar assistant. Analyze the text and return ONLY valid JSON with this format:
-{
-  "errors": [
-    {
-      "original_sentence_fragment": "the exact problematic word or phrase",
-      "error_type": "grammar|spelling|punctuation|style|word_choice",
-      "explanation": "brief explanation of what is wrong",
-      "suggestion": "corrected version"
-    }
-  ],
-  "summary": "one sentence overall feedback"
-}
-If no errors, return "errors": [].
-Return ONLY JSON, no other text.`;
+            const systemPrompt = `You are a strict English grammar checker. Analyze the text and return ONLY valid JSON with this format:
+                {
+                "errors": [
+                    {
+                    "original_fragment": "the exact word or phrase that have grammar issues, do not return the whole sentence",
+                    "error_type": "agreement|spelling|punctuation|style|word_choice",
+                    "explanation": "brief explanation of what is wrong, specifying the grammar rule if possible, no longer than 20 words",
+                    "suggestion": "corrected version"
+                    }
+                ],
+                "summary": "one sentence overall feedback"
+                }
+                If no errors, return "errors": [].
+                original fragments includes only key words. Return ONLY JSON, no other text. You may have multiple errors for the same sentence. One error only corresponds to one issue, do not combine multiple issues into one error. Always try to find all possible grammar issues in the text.`;
 
             try {
                 const controller = new AbortController();
@@ -1233,7 +1259,7 @@ Return ONLY JSON, no other text.`;
                         'Authorization': `Bearer ${DMX_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: 'gpt-4o-mini',
+                        model: 'qwen-flash-2025-07-28',////////doubao-seed-1-6-flash-250615//////qwen-plus/////qwen-flash-2025-07-28//////qwen-turbo-latest///////////////////////////
                         messages: [
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: `Please check this English text: ${text.substring(0, 3000)}` }
