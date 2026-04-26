@@ -487,6 +487,7 @@
                 <div class="hint-text">
                     点击[语法检查]按钮，分析语法问题，并给出修改建议
                     <br>目前上传附件仅支持txt格式，更多格式敬请期待
+                    
                 </div>
             </div>
             <div class="right-column">
@@ -494,7 +495,7 @@
                     <div class="outputText" id="outputText">语法检查结果将显示在这里...</div>
                 </div>
                 <div class="result-note">
-                    检测结果仅供参考
+                    检测结果仅供参考 (AI进阶检测耗时长，请耐心等待)
                 </div>
             </div>
         </div>
@@ -705,6 +706,27 @@
                 { question: "There are many ___ playing in the park.", options: ["child", "childs", "children"], answer: 2, feedback: "child 的复数是不规则变化 children，不是 childs。" },
                 { question: "He bought three ___ from the store.", options: ["furnitures", "furniture", "pieces of furniture"], answer: 2, feedback: "furniture 是不可数名词，表示数量用 a piece of furniture 或 pieces of furniture。" },
                 { question: "Which sentence is correct?", options: ["She lives in paris.", "She lives in Paris.", "She lives in paris."], answer: 1, feedback: "Paris 是专有名词，首字母必须大写。" }
+            ]
+        },
+        '形容词副词使用错误': {
+            title: '🔍 形容词与副词',
+            content: '形容词用于修饰名词或代词，说明事物的性质或特征；副词用于修饰动词、形容词、其他副词或整个句子，说明动作的方式、程度、时间等。常见错误包括混淆形容词和副词、比较级和最高级使用不当、副词位置错误等。',
+            examples: [
+                '✅ She sings **beautifully**.              （副词修饰动词）',
+                '❌ She sings **beautiful**.                （误用形容词修饰动词）',
+                '✅ He is a **careful** driver.             （形容词修饰名词）',
+                '✅ He drives **carefully**.                （副词修饰动词）',
+                '✅ This book is **more interesting** than that one.  （比较级）',
+                '❌ This book is **more better** than that one.       （双重比较级错误）',
+                '✅ She is the **tallest** girl in class.    （最高级）',
+                '❌ She is **more tall** than her sister.    （单音节形容词应加 -er）'
+            ],
+            exercises: [
+                { question: "She speaks English very ___.", options: ["good", "well", "better"], answer: 1, feedback: "修饰动词 speaks 需要用副词 well，good 是形容词不能修饰动词。" },
+                { question: "This problem is ___ than the last one.", options: ["more difficult", "difficulter", "most difficult"], answer: 0, feedback: "多音节形容词 difficult 的比较级用 more difficult，不是加 -er。" },
+                { question: "He runs ___ of all the boys in his class.", options: ["faster", "fastest", "the fastest"], answer: 2, feedback: "三者以上比较用最高级，副词最高级前加 the，即 the fastest。" },
+                { question: "The soup tastes ___.", options: ["deliciously", "delicious", "more deliciously"], answer: 1, feedback: "taste 是感官动词，后接形容词作表语，不是副词。类似用法的还有 smell、sound、look、feel。" },
+                { question: "Which sentence is correct?", options: ["He drives careful.", "He drives carefully.", "He is a carefully driver."], answer: 1, feedback: "修饰动词 drives 用副词 carefully；修饰名词 driver 用形容词 careful。形容词和副词不能互换。" }
             ]
         },
             '默认': {
@@ -937,6 +959,21 @@
                 /(these|those)\s+(is|was)/i
             ],
             type: '名词使用错误'
+        },
+        {
+            keywords: ['形容词', '副词', 'adjective', 'adverb', 'comparative', 'superlative',
+                    'adjective adverb confusion', 'modifier', 'degree',
+                    'double comparative', 'double superlative'],
+            patterns: [
+                /(adjective|adverb)\s+(confusion|error|mistake)/i,
+                /(comparative|superlative)\s+(form|error|mistake)/i,
+                /double\s+(comparative|superlative)/i,
+                /(adjective|adverb).*(instead|rather than|should be)/i,
+                /\b(more\s+\w+er|most\s+\w+est)\b/i,
+                /(modifier|modifiy)\s+(noun|verb|adjective|adverb)/i,
+                /(good|bad).*(adverb|modif)/i
+            ],
+            type: '形容词副词使用错误'
         }
         ];
 
@@ -950,6 +987,7 @@
             '代词使用错误': '代词使用错误',
             '情态动词/助动词使用错误': '情态动词/助动词使用错误',
             '句子语序错误': '句子语序错误',
+            '形容词副词使用错误': '形容词副词使用错误',
             '名词使用错误': '名词使用错误'
         };
 
@@ -964,6 +1002,7 @@
             'pronoun': '代词使用错误', 
             'other': '语法知识',
             'sentence_order': '句子语序错误',
+            'adjective_adverb': '形容词副词使用错误',
             'noun': '名词使用错误'
         };
 
@@ -1156,7 +1195,7 @@
             lastLTMatches = data.matches || [];
             let result = '';
             if (!data.matches || data.matches.length === 0) {
-                result += "✨ 未发现语法或拼写问题\n";
+                result += "✨ 暂未发现语法或拼写问题，可等待进阶检测\n";
                 clearKnowledgeCards();
                 return result;
             }
@@ -1230,7 +1269,7 @@
                 "errors": [
                     {
                     "original_fragment": "the exact word or phrase that have grammar issues, do not return the whole sentence",
-                    "error_type": "article|pronoun|noun|agreement|tense|sentence_order|spelling|punctuation|modal_auxiliary_verb|other",
+                    "error_type": "article|pronoun|noun|adjective_adverb|agreement|tense|sentence_order|spelling|punctuation|modal_auxiliary_verb|other",
                     "explanation": "brief explanation of what is wrong, specifying the grammar rule if possible, no longer than 20 words",
                     "suggestion": "corrected version"
                     }
@@ -1242,7 +1281,8 @@
                 original fragments includes only key words. Return ONLY JSON, no other text. You may have multiple errors for the same sentence. One error only corresponds to one issue, do not combine multiple issues into one error. Always try to find all possible grammar issues in the text.
 
                 CRITICAL: "modal_auxiliary_verb" is for errors with modal verbs (can, may, must, should, etc.) AND auxiliary verbs (do, does, did) where the base form is required. "agreement" is for subject-verb agreement (e.g., third-person singular -s). "pronoun" is only for incorrect usage like "teach he". Only use "other" for error types NOT in the list.
-                CRITICAL: issues like "He goes to school, don't he?" is an AGREEMENT error. Only return article error when the article exists`;
+                CRITICAL: issues like "He goes to school, don't he?" is an AGREEMENT error. Only return article error when the article exists. Sentences like "I answer he yesterday" is NOT a sentence_order error. "cannot" is a correct expression. Sentences like "That make me sad" is agreement error. 
+                CRITICAL: adjective_adverb" is for confusion between adjectives and adverbs(sentences like "I play piano good" and "the day ended good" is a adjective_adverb error) OR comparative/superlative errors OR double comparative errors`;
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -1250,7 +1290,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DMX_API_KEY}` },
                     body: JSON.stringify({
-                        model: 'qwen-flash-2025-07-28',
+                        model: 'qwen-flash-2025-07-28',//qwen-flash-2025-07-28/deepseek-v4-flash
                         messages: [
                             { role: 'system', content: systemPrompt },
                             { role: 'user', content: `Please check this English text: ${text.substring(0, 3000)}` }
@@ -1353,6 +1393,8 @@
                         outputDiv.innerHTML = currentContent + '\n\n' + '─'.repeat(50) + '\n\n📋 LanguageTool 详细检测：\n' + formatLTResult(data, text);
                         setupOutputLinks();
                     }
+                    // ===== 新增：LT 完成后立即更新知识卡片 =====
+                    generateKnowledgeCards([...allIssueTypes]);
                 } catch (err) {
                     console.log('LT错误:', err);
                     ltFinished = true;
@@ -1382,6 +1424,8 @@
                             setupOutputLinks();
                         }
                     }
+                    // ===== 新增：DMX 完成后立即更新知识卡片 =====
+                    generateKnowledgeCards([...allIssueTypes]);
                 } catch (err) {
                     console.log('DMX错误:', err);
                     dmxFinished = true;
@@ -1389,7 +1433,6 @@
                 }
             })();
             await Promise.all([ltPromise, dmxPromise]);
-            generateKnowledgeCards([...allIssueTypes]);
             checkBtn.innerText = originalText;
             updateCheckButtonState();
         }
