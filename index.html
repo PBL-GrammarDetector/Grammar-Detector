@@ -514,975 +514,1025 @@
     </div>
     <input type="file" id="fileInput" accept=".txt,.md,.text/plain" hidden>
 
-<script>
-        // ========== DOM 元素引用 ==========
-        const inputEditor = document.getElementById('inputEditor');
-        const outputDiv = document.getElementById('outputText');
-        const checkBtn = document.getElementById('checkBtn');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const fileInput = document.getElementById('fileInput');
-        const knowledgeCardsContainer = document.getElementById('knowledgeCards');
+    <script>
+            // ========== DOM 元素引用 ==========
+            const inputEditor = document.getElementById('inputEditor');
+            const outputDiv = document.getElementById('outputText');
+            const checkBtn = document.getElementById('checkBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const fileInput = document.getElementById('fileInput');
+            const knowledgeCardsContainer = document.getElementById('knowledgeCards');
 
-        // ========== API 配置 ==========
-        const API_URL = 'https://api.languagetool.org/v2/check';
-        const MAX_BYTES = 20000;
-        const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
-        const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';
+            // ========== API 配置 ==========
+            const API_URL = 'https://api.languagetool.org/v2/check';
+            const MAX_BYTES = 20000;
+            const DMX_API_URL = 'https://www.dmxapi.cn/v1/chat/completions';
+            const DMX_API_KEY = 'sk-ztRAtcTeJqTRuWYoFzxa3roVFxERt6ogKKZPdLxzvoGEwcE9';
 
-        let lastLTMatches = [];
-        let lastDMXMatches = [];
-        let firstResultShown = false;
-        let currentLTData = null;
-        let currentDMXAnalysis = null;
-        let allIssueTypes = new Set();
+            let lastLTMatches = [];
+            let lastDMXMatches = [];
+            let firstResultShown = false;
+            let currentLTData = null;
+            let currentDMXAnalysis = null;
+            let allIssueTypes = new Set();
 
-        function getEditorText() {
-            const clone = inputEditor.cloneNode(true);
-            const marks = clone.querySelectorAll('mark');
-            marks.forEach(mark => {
-                const text = document.createTextNode(mark.textContent);
-                mark.parentNode.replaceChild(text, mark);
-            });
-            return clone.innerText || '';
-        }
-
-        function setEditorText(text) {
-            inputEditor.innerText = text;
-        }
-
-        function getWritingStats(text) {
-            if (!text || !text.trim()) {
-                return { totalWords: 0, totalChars: 0, sentenceCount: 0, avgSentenceLength: 0, lexicalDiversity: 0, uniqueWordsCount: 0 };
+            function getEditorText() {
+                const clone = inputEditor.cloneNode(true);
+                const marks = clone.querySelectorAll('mark');
+                marks.forEach(mark => {
+                    const text = document.createTextNode(mark.textContent);
+                    mark.parentNode.replaceChild(text, mark);
+                });
+                return clone.innerText || '';
             }
-            const totalChars = text.replace(/\s/g, '').length;
-            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
-            const totalWords = words.length;
-            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-            const sentenceCount = sentences.length;
-            const avgSentenceLength = sentenceCount > 0 ? (totalWords / sentenceCount).toFixed(2) : 0;
-            const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[^\w]/g, '')));
-            const uniqueWordsCount = uniqueWords.size;
-            const lexicalDiversity = totalWords > 0 ? ((uniqueWordsCount / totalWords) * 100).toFixed(1) : 0;
-            return { totalWords, totalChars, sentenceCount, avgSentenceLength: parseFloat(avgSentenceLength), lexicalDiversity: parseFloat(lexicalDiversity), uniqueWordsCount };
-        }
 
-        function getStatsText(stats) {
-            return '【写作分析统计指标】\n' +
-                `    总词数：${stats.totalWords} 词\n` +
-                `    总字符数（不含空格）：${stats.totalChars} 字符\n` +
-                `    句子数：${stats.sentenceCount} 句\n` +
-                `    平均句长：${stats.avgSentenceLength} 词/句\n` +
-                `    词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
-                `    不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
-        }
+            function setEditorText(text) {
+                inputEditor.innerText = text;
+            }
 
-        const knowledgeBase = {
-            '主谓一致问题': {
-                title: '📝 主谓一致',
-                content: '主语和谓语动词必须在人称和数上保持一致。单数主语用单数动词，复数主语用复数动词。',
-                examples: ['✅ He **plays** football every day.', '❌ He play football every day.', '✅ They **play** football every day.', '❌ They plays football every day.'],
-                exercises: [
-                    { question: "The cat ___ on the sofa.", options: ["is", "are"], answer: 0, feedback: "主语是单数名词 'cat'，谓语动词用单数形式 is。" },
-                    { question: "My brothers ___ playing soccer in the park.", options: ["is", "are"], answer: 1, feedback: "主语是复数名词 'brothers'，谓语动词用复数形式 are。" },
-                    { question: "Either my parents or my sister ___ responsible for picking me up.", options: ["is", "are"], answer: 0, feedback: "由 'either...or...' 连接时，谓语动词与最近的主语一致。'sister' 是单数，故用 is。" },
-                    { question: "A number of students ___ attending the lecture.", options: ["is", "are"], answer: 1, feedback: "'a number of + 复数名词' 表示'许多'，主语为复数，用 are。" },
-                    { question: "The list of items that need to be checked ___ getting longer.", options: ["is", "are"], answer: 0, feedback: "主语是 'the list'（单数），定语从句不影响主语的单复数，用 is。" }
-                ]
-            },
-            '冠词使用错误': {
-                title: '🔤 冠词使用 (a/an/the)',
-                content: '冠词 "a" 用于以辅音音素开头的单词前，"an" 用于以元音音素开头的单词前。注意是发音不是字母。',
-                examples: ['✅ **a** university (/ju:/ 辅音音素)', '✅ **an** hour (元音音素，h不发音)', '✅ **an** apple', '✅ **a** cat'],
-                exercises: [
-                    { question: "She has ___ apple in her bag.", options: ["a", "an", "the"], answer: 1, feedback: "'apple' 以元音音素 /æ/ 开头，泛指一个苹果，用不定冠词 an。" },
-                    { question: "I saw ___ movie last night. ___ movie was amazing!", options: ["a / The", "an / A", "the / An"], answer: 0, feedback: "第一空首次提及用 a；第二空上文已提到的特定电影，特指用 the。" },
-                    { question: "He plays ___ piano every evening, but he doesn't like ___ homework.", options: ["the / the", "the / (零冠词)", "a / the"], answer: 1, feedback: "乐器前加 the（play the piano）；学科、作业等抽象名词前泛指时不加冠词。" },
-                    { question: "It's ___ honor to meet you. You're ___ most beautiful person I've ever seen.", options: ["a / a", "an / the", "an / a"], answer: 1, feedback: "'honor' 以元音音素开头用 an；形容词最高级前必须加 the。" },
-                    { question: "In ___ morning, I usually drink ___ cup of coffee while reading ___ news.", options: ["the / a / (零冠词)", "the / the / the", "a / a / the"], answer: 0, feedback: "'in the morning' 固定搭配；'cup' 可数单数泛指用 a；'news' 不可数泛指零冠词。" }
-                ]
-            },
-            '时态问题': {
-                title: '⏰ 时态使用',
-                content: '动词时态需要与时间状语和上下文保持一致。常见时态包括一般现在时、一般过去时、现在完成时等。',
-                examples: ['✅ I **went** to the store yesterday.', '❌ I go to the store yesterday.', '✅ She **has finished** her homework.', '❌ She finish her homework.'],
-                exercises: [
-                    { question: "By the time we arrived at the station, the train ___ for ten minutes, so we had to wait for the next one.", options: ["has left", "had left", "had been away", "was leaving"], answer: 2, feedback: "'had been away' 是过去完成时，'be away' 是持续性状态，可与 'for ten minutes' 搭配。" },
-                    { question: "She told me she ___ the manuscript three times before she finally decided to submit it.", options: ["revised", "had revised", "has revised", "was revising"], answer: 1, feedback: "动作发生在 'told' 之前，构成'过去的过去'，用过去完成时 had revised。" },
-                    { question: "I ___ on this project for six hours straight, and I still haven't figured out the core issue.", options: ["have been working", "had been working", "worked", "am working"], answer: 0, feedback: "从过去持续到现在并可能继续，用现在完成进行时 have been working。" },
-                    { question: "When I called him at 9 p.m. yesterday, he said he ___ dinner and couldn't talk long.", options: ["is having", "was having", "has had", "had had"], answer: 1, feedback: "过去具体时间点正在发生的动作，用过去进行时 was having。" },
-                    { question: "It ___ for nearly a week before the rescue team finally reached the trapped hikers.", options: ["rained", "had been raining", "has rained", "was raining"], answer: 1, feedback: "过去某一时间之前持续进行的动作，用过去完成进行时 had been raining。" }
-                ]
-            },
-            '拼写问题': {
-                title: '✏️ 拼写检查',
-                content: '单词拼写错误可能影响阅读理解。建议使用词典确认正确拼写。',
-                examples: ['✅ receive (不是 recieve)', '✅ separate (不是 seperate)', '✅ definitely (不是 definately)'],
-                exercises: [
-                    { question: "The artist's unique s___ (风格) blends traditional and modern elements.", options: ["stile", "style", "stlye"], answer: 1, feedback: "正确拼写是 style。注意与 stile（门阶）区分，y 在词中发 /aɪ/ 音。" },
-                    { question: "The company issued a formal ___ (道歉) for the service failure.", options: ["apology", "apollogy", "apologe"], answer: 0, feedback: "正确拼写是 apology。注意词尾是 -logy，易误拼为 apollogy（双 l）或 apologe。" },
-                    { question: "The scientist proposed a new t___ (理论) to explain the phenomenon.", options: ["theory", "theroy", "thoery"], answer: 0, feedback: "正确拼写是 theory。注意与 therapy 区分，eo 组合易误拼。" },
-                    { question: "The new policy aims to p___ (促进) sustainable development.", options: ["promote", "promotte", "promotee"], answer: 0, feedback: "正确拼写是 promote。注意 -mote 来自拉丁语 movere（移动），易误拼为 promotte。" },
-                    { question: "Choose the correct spelling of 'definitely':", options: ["definately", "definitely", "definatly"], answer: 1, feedback: "正确拼写是 definitely。常见错误包括 definately 和 definatly。" }
-                ]
-            },
-            '标点符号': {
-                title: '📖 标点符号',
-                content: '正确使用标点符号能使句子结构清晰，表达准确。注意中英文标点的区别。',
-                examples: ['✅ What time is it?', '✅ I like apples, oranges, and bananas.', '❌ I like apples oranges and bananas'],
-                exercises: [
-                    { question: "The conference will feature speakers from London, England ___ Paris, France ___ and Tokyo, Japan.", options: ["; ;", ", ,", ", ;", "; ,"], answer: 0, feedback: "当并列项内部已包含逗号时，各项之间必须用分号分隔，以避免混淆。" },
-                    { question: "判断标点使用：The teacher said, \"homework is due tomorrow\".", options: ["正确", "错误，应改为 The teacher said, \"Homework is due tomorrow.\""], answer: 1, feedback: "引语内首字母需大写，句号应放在引号内部（美式规则）。" },
-                    { question: "It was raining heavily; ___ we decided to stay indoors.", options: [",", ";", "."], answer: 0, feedback: "此处由连词隐含连接，应用逗号。若无连词则可用分号连接两个独立分句。" },
-                    { question: "以下句子中撇号使用正确的一项是：", options: ["Its a beautiful day.", "It's a beautiful day.", "Its' a beautiful day."], answer: 1, feedback: "It's 是 it is 的缩写，必须带撇号；its 是所有格，不加撇号。" },
-                    { question: "以下句子中分号使用正确的一项是：", options: ["I have a meeting at 3 p.m; don't be late.", "I have a meeting at 3 p.m.; don't be late.", "I have a meeting at 3 p.m., don't be late.", "I have a meeting at 3 p.m. don't be late."], answer: 1, feedback: "p.m. 是缩写必须加句号；两个独立分句无连词，用分号连接正确。" }
-                ]
-            },
-            '情态动词/助动词使用错误': {
-                title: '📖 情态动词 / 助动词',
-                content: '情态动词（can, may, must, should 等）和助动词（do, does, did）后必须接动词原形。情态动词表示可能性、必要性、意愿等；助动词用于构成否定句、疑问句或强调。',
-                examples: ['✅ He can **do** it.', '✅ We should **arrive** early.', '❌ She may **agrees** with the opinion.', '✅ She does **like** coffee.', '❌ She does **likes** coffee.', '❌ He did not **went** there.'],
-                exercises: [
-                    { question: "You ___ turn off the lights when you leave the room. It saves energy.", options: ["can", "should", "may", "will"], answer: 1, feedback: "should 表示建议或义务，意为'应该'，符合节能环保的劝告语境。" },
-                    { question: "--- Must I finish the report today? --- No, you ___. You can hand it in tomorrow.", options: ["mustn't", "can't", "needn't", "shouldn't"], answer: 2, feedback: "Must I...? 的否定回答用 needn't 或 don't have to，表示'不必'。" },
-                    { question: "The phone is ringing, but no one's answering. They ___ be at home.", options: ["can't", "mustn't", "shouldn't", "might not"], answer: 0, feedback: "根据语境'电话响但没人接'，说话人做出否定推测'不可能在家'，用 can't。" },
-                    { question: "When I was a child, I ___ swim very well, but now I'm a bit rusty.", options: ["would", "could", "might", "should"], answer: 1, feedback: "could 表示过去的能力，此处指'小时候能游泳'。" },
-                    { question: "You ___ have told me earlier! I wouldn't have made such a mistake.", options: ["must", "should", "could", "may"], answer: 1, feedback: "should have done 表示'本该做却未做'，含有责备或遗憾语气。" }
-                ]
-            },
-            '代词使用错误': {
-                    title: '👤 代词使用',
-                    content: '代词必须与所指代的名词在人称、数、格上保持一致。主格（I, he, she, we, they）作主语；宾格（me, him, her, us, them）作宾语；所有格（my, his, her, our, their）表示所属。',
-                    examples: [
-                        '✅ I saw **him** yesterday.',
-                        '❌ I saw **he** yesterday.',
-                        '✅ This is **her** book.',
-                        '✅ The students finished **their** homework.',
-                        '❌ The students finished **its** homework.'
-                    ],
+            function getWritingStats(text) {
+                if (!text || !text.trim()) {
+                    return { totalWords: 0, totalChars: 0, sentenceCount: 0, avgSentenceLength: 0, lexicalDiversity: 0, uniqueWordsCount: 0 };
+                }
+                const totalChars = text.replace(/\s/g, '').length;
+                const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+                const totalWords = words.length;
+                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                const sentenceCount = sentences.length;
+                const avgSentenceLength = sentenceCount > 0 ? (totalWords / sentenceCount).toFixed(2) : 0;
+                const uniqueWords = new Set(words.map(w => w.toLowerCase().replace(/[^\w]/g, '')));
+                const uniqueWordsCount = uniqueWords.size;
+                const lexicalDiversity = totalWords > 0 ? ((uniqueWordsCount / totalWords) * 100).toFixed(1) : 0;
+                return { totalWords, totalChars, sentenceCount, avgSentenceLength: parseFloat(avgSentenceLength), lexicalDiversity: parseFloat(lexicalDiversity), uniqueWordsCount };
+            }
+
+            function getStatsText(stats) {
+                return '【写作分析统计指标】\n' +
+                    `    总词数：${stats.totalWords} 词\n` +
+                    `    总字符数（不含空格）：${stats.totalChars} 字符\n` +
+                    `    句子数：${stats.sentenceCount} 句\n` +
+                    `    平均句长：${stats.avgSentenceLength} 词/句\n` +
+                    `    词汇多样性：${stats.lexicalDiversity}% （不重复词占比）\n` +
+                    `    不重复词数：${stats.uniqueWordsCount} 个\n\n${'─'.repeat(50)}\n\n`;
+            }
+
+            const knowledgeBase = {
+                '主谓一致问题': {
+                    title: '📝 主谓一致',
+                    content: '主语和谓语动词必须在人称和数上保持一致。单数主语用单数动词，复数主语用复数动词。',
+                    examples: ['✅ He **plays** football every day.', '❌ He play football every day.', '✅ They **play** football every day.', '❌ They plays football every day.'],
                     exercises: [
-                        { question: "Between you and ___, I think the plan needs revision.", options: ["I", "me", "myself"], answer: 1, feedback: "介词 between 后接宾格，between you and me 是正确的。" },
-                        { question: "___ and my brother went to the concert together.", options: ["Me", "I", "Myself"], answer: 1, feedback: "此处作主语，用主格 I。" },
-                        { question: "The teacher gave ___ students a second chance.", options: ["we", "us", "our"], answer: 1, feedback: "动词 gave 后接双宾语，间接宾语用宾格 us。" },
-                        { question: "Everyone should bring ___ own lunch to the picnic.", options: ["his", "their", "its"], answer: 1, feedback: "现代英语中 everyone 常用 their 指代（单数 they），以避免性别偏见。" },
-                        { question: "Neither of the boys finished ___ homework on time.", options: ["his", "their", "its"], answer: 0, feedback: "neither 是单数，传统上用 his（泛指），也可用 their（非正式）。此处优选 his。" }
+                        { question: "The cat ___ on the sofa.", options: ["is", "are"], answer: 0, feedback: "主语是单数名词 'cat'，谓语动词用单数形式 is。" },
+                        { question: "My brothers ___ playing soccer in the park.", options: ["is", "are"], answer: 1, feedback: "主语是复数名词 'brothers'，谓语动词用复数形式 are。" },
+                        { question: "Either my parents or my sister ___ responsible for picking me up.", options: ["is", "are"], answer: 0, feedback: "由 'either...or...' 连接时，谓语动词与最近的主语一致。'sister' 是单数，故用 is。" },
+                        { question: "A number of students ___ attending the lecture.", options: ["is", "are"], answer: 1, feedback: "'a number of + 复数名词' 表示'许多'，主语为复数，用 are。" },
+                        { question: "The list of items that need to be checked ___ getting longer.", options: ["is", "are"], answer: 0, feedback: "主语是 'the list'（单数），定语从句不影响主语的单复数，用 is。" }
                     ]
                 },
-            '句子语序错误': {
-            title: '📏 句子语序',
-            content: '英语句子的基本语序是 SVO（主语 + 动词 + 宾语）。疑问句需倒装（助动词提前），形容词放在名词前，副词位置灵活但通常不插入动词与宾语之间。',
-            examples: [
-                '✅ I **like apples**.                （SVO 正常语序）',
-                '❌ I **apples like**.               （宾语误放动词前）',
-                '✅ **Do you** like apples?           （疑问句：助动词提前）',
-                '❌ **You do** like apples?           （疑问句缺少倒装）',
-                '✅ She **often goes** to the park.   （副词在动词前）',
-                '❌ She goes often to the park.       （副词位置不当）',
-                '✅ I have **already finished**.      （副词在助动词后）'
-            ],
-            exercises: [
-                { question: "She ___ to school every day.", options: ["goes", "every day goes", "to school goes"], answer: 0, feedback: "正常语序：主语 + 动词 + 地点状语。She goes to school every day." },
-                { question: "___ you ever been to Paris?", options: ["Have", "Did", "You have"], answer: 0, feedback: "疑问句需助动词提前倒装。Have you ever been to Paris?" },
-                { question: "I ___ my homework yesterday.", options: ["finished", "did finished", "yesterday finished"], answer: 0, feedback: "正常语序：主语 + 动词 + 宾语 + 时间状语。I finished my homework yesterday." },
-                { question: "He ___ plays tennis on Sundays.", options: ["often", "plays often", "tennis often"], answer: 0, feedback: "频度副词通常放在实义动词之前。He often plays tennis on Sundays." },
-                { question: "Which sentence has correct word order?", options: ["Always I am happy.", "I am always happy.", "I always am happy."], answer: 1, feedback: "频度副词放在 be 动词之后。I am always happy." }
-            ],
-        },
-            '名词使用错误': {
-            title: '📦 名词使用',
-            content: '英语名词分为可数名词和不可数名词。可数名词有单复数形式，不可数名词没有复数形式，不能直接加 s，也不与 a/an 连用。专有名词（人名、地名、机构名等）首字母需大写。',
-            examples: [
-                '✅ I need some **information**.        （information 不可数，不加 s）',
-                '❌ I need some **informations**.        （不可数名词误加 s）',
-                '✅ She gave me a piece of **advice**.   （advice 不可数，用 a piece of）',
-                '❌ She gave me an **advice**.           （不可数名词前误加 a/an）',
-                '✅ There are many **books** on the desk. （可数名词复数加 s）',
-                '✅ I visited **London** last year.       （专有名词首字母大写）',
-                '❌ I visited **london** last year.       （专有名词未大写）'
-            ],
-            exercises: [
-                { question: "I need some ___ about the train schedule.", options: ["informations", "information", "an information"], answer: 1, feedback: "information 是不可数名词，不能加 s，也不能与 an 连用。" },
-                { question: "She gave me two pieces of useful ___.", options: ["advices", "advice", "an advice"], answer: 1, feedback: "advice 是不可数名词，用 a piece of advice 表示'一条建议'。" },
-                { question: "There are many ___ playing in the park.", options: ["child", "childs", "children"], answer: 2, feedback: "child 的复数是不规则变化 children，不是 childs。" },
-                { question: "He bought three ___ from the store.", options: ["furnitures", "furniture", "pieces of furniture"], answer: 2, feedback: "furniture 是不可数名词，表示数量用 a piece of furniture 或 pieces of furniture。" },
-                { question: "Which sentence is correct?", options: ["She lives in paris.", "She lives in Paris.", "She lives in paris."], answer: 1, feedback: "Paris 是专有名词，首字母必须大写。" }
-            ]
-        },
-        '形容词副词使用错误': {
-            title: '🔍 形容词与副词',
-            content: '形容词用于修饰名词或代词，说明事物的性质或特征；副词用于修饰动词、形容词、其他副词或整个句子，说明动作的方式、程度、时间等。常见错误包括混淆形容词和副词、比较级和最高级使用不当、副词位置错误等。',
-            examples: [
-                '✅ She sings **beautifully**.              （副词修饰动词）',
-                '❌ She sings **beautiful**.                （误用形容词修饰动词）',
-                '✅ He is a **careful** driver.             （形容词修饰名词）',
-                '✅ He drives **carefully**.                （副词修饰动词）',
-                '✅ This book is **more interesting** than that one.  （比较级）',
-                '❌ This book is **more better** than that one.       （双重比较级错误）',
-                '✅ She is the **tallest** girl in class.    （最高级）',
-                '❌ She is **more tall** than her sister.    （单音节形容词应加 -er）'
-            ],
-            exercises: [
-                { question: "She speaks English very ___.", options: ["good", "well", "better"], answer: 1, feedback: "修饰动词 speaks 需要用副词 well，good 是形容词不能修饰动词。" },
-                { question: "This problem is ___ than the last one.", options: ["more difficult", "difficulter", "most difficult"], answer: 0, feedback: "多音节形容词 difficult 的比较级用 more difficult，不是加 -er。" },
-                { question: "He runs ___ of all the boys in his class.", options: ["faster", "fastest", "the fastest"], answer: 2, feedback: "三者以上比较用最高级，副词最高级前加 the，即 the fastest。" },
-                { question: "The soup tastes ___.", options: ["deliciously", "delicious", "more deliciously"], answer: 1, feedback: "taste 是感官动词，后接形容词作表语，不是副词。类似用法的还有 smell、sound、look、feel。" },
-                { question: "Which sentence is correct?", options: ["He drives careful.", "He drives carefully.", "He is a carefully driver."], answer: 1, feedback: "修饰动词 drives 用副词 carefully；修饰名词 driver 用形容词 careful。形容词和副词不能互换。" }
-            ]
-        },
-            '默认': {
-                title: '💡 语法知识',
-                content: '此语法问题暂时没有对应的知识卡片，建议查阅相关语法书籍或在线资源进行学习。',
-                examples: ['建议查阅语法参考书', '多读多写提高语感', '注意句子结构的完整性'],
+                '冠词使用错误': {
+                    title: '🔤 冠词使用 (a/an/the)',
+                    content: '冠词 "a" 用于以辅音音素开头的单词前，"an" 用于以元音音素开头的单词前。注意是发音不是字母。',
+                    examples: ['✅ **a** university (/ju:/ 辅音音素)', '✅ **an** hour (元音音素，h不发音)', '✅ **an** apple', '✅ **a** cat'],
+                    exercises: [
+                        { question: "She has ___ apple in her bag.", options: ["a", "an", "the"], answer: 1, feedback: "'apple' 以元音音素 /æ/ 开头，泛指一个苹果，用不定冠词 an。" },
+                        { question: "I saw ___ movie last night. ___ movie was amazing!", options: ["a / The", "an / A", "the / An"], answer: 0, feedback: "第一空首次提及用 a；第二空上文已提到的特定电影，特指用 the。" },
+                        { question: "He plays ___ piano every evening, but he doesn't like ___ homework.", options: ["the / the", "the / (零冠词)", "a / the"], answer: 1, feedback: "乐器前加 the（play the piano）；学科、作业等抽象名词前泛指时不加冠词。" },
+                        { question: "It's ___ honor to meet you. You're ___ most beautiful person I've ever seen.", options: ["a / a", "an / the", "an / a"], answer: 1, feedback: "'honor' 以元音音素开头用 an；形容词最高级前必须加 the。" },
+                        { question: "In ___ morning, I usually drink ___ cup of coffee while reading ___ news.", options: ["the / a / (零冠词)", "the / the / the", "a / a / the"], answer: 0, feedback: "'in the morning' 固定搭配；'cup' 可数单数泛指用 a；'news' 不可数泛指零冠词。" }
+                    ]
+                },
+                '时态问题': {
+                    title: '⏰ 时态使用',
+                    content: '动词时态需要与时间状语和上下文保持一致。常见时态包括一般现在时、一般过去时、现在完成时等。',
+                    examples: ['✅ I **went** to the store yesterday.', '❌ I go to the store yesterday.', '✅ She **has finished** her homework.', '❌ She finish her homework.'],
+                    exercises: [
+                        { question: "By the time we arrived at the station, the train ___ for ten minutes, so we had to wait for the next one.", options: ["has left", "had left", "had been away", "was leaving"], answer: 2, feedback: "'had been away' 是过去完成时，'be away' 是持续性状态，可与 'for ten minutes' 搭配。" },
+                        { question: "She told me she ___ the manuscript three times before she finally decided to submit it.", options: ["revised", "had revised", "has revised", "was revising"], answer: 1, feedback: "动作发生在 'told' 之前，构成'过去的过去'，用过去完成时 had revised。" },
+                        { question: "I ___ on this project for six hours straight, and I still haven't figured out the core issue.", options: ["have been working", "had been working", "worked", "am working"], answer: 0, feedback: "从过去持续到现在并可能继续，用现在完成进行时 have been working。" },
+                        { question: "When I called him at 9 p.m. yesterday, he said he ___ dinner and couldn't talk long.", options: ["is having", "was having", "has had", "had had"], answer: 1, feedback: "过去具体时间点正在发生的动作，用过去进行时 was having。" },
+                        { question: "It ___ for nearly a week before the rescue team finally reached the trapped hikers.", options: ["rained", "had been raining", "has rained", "was raining"], answer: 1, feedback: "过去某一时间之前持续进行的动作，用过去完成进行时 had been raining。" }
+                    ]
+                },
+                '拼写问题': {
+                    title: '✏️ 拼写检查',
+                    content: '单词拼写错误可能影响阅读理解。建议使用词典确认正确拼写。',
+                    examples: ['✅ receive (不是 recieve)', '✅ separate (不是 seperate)', '✅ definitely (不是 definately)'],
+                    exercises: [
+                        { question: "The artist's unique s___ (风格) blends traditional and modern elements.", options: ["stile", "style", "stlye"], answer: 1, feedback: "正确拼写是 style。注意与 stile（门阶）区分，y 在词中发 /aɪ/ 音。" },
+                        { question: "The company issued a formal ___ (道歉) for the service failure.", options: ["apology", "apollogy", "apologe"], answer: 0, feedback: "正确拼写是 apology。注意词尾是 -logy，易误拼为 apollogy（双 l）或 apologe。" },
+                        { question: "The scientist proposed a new t___ (理论) to explain the phenomenon.", options: ["theory", "theroy", "thoery"], answer: 0, feedback: "正确拼写是 theory。注意与 therapy 区分，eo 组合易误拼。" },
+                        { question: "The new policy aims to p___ (促进) sustainable development.", options: ["promote", "promotte", "promotee"], answer: 0, feedback: "正确拼写是 promote。注意 -mote 来自拉丁语 movere（移动），易误拼为 promotte。" },
+                        { question: "Choose the correct spelling of 'definitely':", options: ["definately", "definitely", "definatly"], answer: 1, feedback: "正确拼写是 definitely。常见错误包括 definately 和 definatly。" }
+                    ]
+                },
+                '标点符号': {
+                    title: '📖 标点符号',
+                    content: '正确使用标点符号能使句子结构清晰，表达准确。注意中英文标点的区别。',
+                    examples: ['✅ What time is it?', '✅ I like apples, oranges, and bananas.', '❌ I like apples oranges and bananas'],
+                    exercises: [
+                        { question: "The conference will feature speakers from London, England ___ Paris, France ___ and Tokyo, Japan.", options: ["; ;", ", ,", ", ;", "; ,"], answer: 0, feedback: "当并列项内部已包含逗号时，各项之间必须用分号分隔，以避免混淆。" },
+                        { question: "判断标点使用：The teacher said, \"homework is due tomorrow\".", options: ["正确", "错误，应改为 The teacher said, \"Homework is due tomorrow.\""], answer: 1, feedback: "引语内首字母需大写，句号应放在引号内部（美式规则）。" },
+                        { question: "It was raining heavily; ___ we decided to stay indoors.", options: [",", ";", "."], answer: 0, feedback: "此处由连词隐含连接，应用逗号。若无连词则可用分号连接两个独立分句。" },
+                        { question: "以下句子中撇号使用正确的一项是：", options: ["Its a beautiful day.", "It's a beautiful day.", "Its' a beautiful day."], answer: 1, feedback: "It's 是 it is 的缩写，必须带撇号；its 是所有格，不加撇号。" },
+                        { question: "以下句子中分号使用正确的一项是：", options: ["I have a meeting at 3 p.m; don't be late.", "I have a meeting at 3 p.m.; don't be late.", "I have a meeting at 3 p.m., don't be late.", "I have a meeting at 3 p.m. don't be late."], answer: 1, feedback: "p.m. 是缩写必须加句号；两个独立分句无连词，用分号连接正确。" }
+                    ]
+                },
+                '情态动词/助动词使用错误': {
+                    title: '📖 情态动词 / 助动词',
+                    content: '情态动词（can, may, must, should 等）和助动词（do, does, did）后必须接动词原形。情态动词表示可能性、必要性、意愿等；助动词用于构成否定句、疑问句或强调。',
+                    examples: ['✅ He can **do** it.', '✅ We should **arrive** early.', '❌ She may **agrees** with the opinion.', '✅ She does **like** coffee.', '❌ She does **likes** coffee.', '❌ He did not **went** there.'],
+                    exercises: [
+                        { question: "You ___ turn off the lights when you leave the room. It saves energy.", options: ["can", "should", "may", "will"], answer: 1, feedback: "should 表示建议或义务，意为'应该'，符合节能环保的劝告语境。" },
+                        { question: "--- Must I finish the report today? --- No, you ___. You can hand it in tomorrow.", options: ["mustn't", "can't", "needn't", "shouldn't"], answer: 2, feedback: "Must I...? 的否定回答用 needn't 或 don't have to，表示'不必'。" },
+                        { question: "The phone is ringing, but no one's answering. They ___ be at home.", options: ["can't", "mustn't", "shouldn't", "might not"], answer: 0, feedback: "根据语境'电话响但没人接'，说话人做出否定推测'不可能在家'，用 can't。" },
+                        { question: "When I was a child, I ___ swim very well, but now I'm a bit rusty.", options: ["would", "could", "might", "should"], answer: 1, feedback: "could 表示过去的能力，此处指'小时候能游泳'。" },
+                        { question: "You ___ have told me earlier! I wouldn't have made such a mistake.", options: ["must", "should", "could", "may"], answer: 1, feedback: "should have done 表示'本该做却未做'，含有责备或遗憾语气。" }
+                    ]
+                },
+                '代词使用错误': {
+                        title: '👤 代词使用',
+                        content: '代词必须与所指代的名词在人称、数、格上保持一致。主格（I, he, she, we, they）作主语；宾格（me, him, her, us, them）作宾语；所有格（my, his, her, our, their）表示所属。',
+                        examples: [
+                            '✅ I saw **him** yesterday.',
+                            '❌ I saw **he** yesterday.',
+                            '✅ This is **her** book.',
+                            '✅ The students finished **their** homework.',
+                            '❌ The students finished **its** homework.'
+                        ],
+                        exercises: [
+                            { question: "Between you and ___, I think the plan needs revision.", options: ["I", "me", "myself"], answer: 1, feedback: "介词 between 后接宾格，between you and me 是正确的。" },
+                            { question: "___ and my brother went to the concert together.", options: ["Me", "I", "Myself"], answer: 1, feedback: "此处作主语，用主格 I。" },
+                            { question: "The teacher gave ___ students a second chance.", options: ["we", "us", "our"], answer: 1, feedback: "动词 gave 后接双宾语，间接宾语用宾格 us。" },
+                            { question: "Everyone should bring ___ own lunch to the picnic.", options: ["his", "their", "its"], answer: 1, feedback: "现代英语中 everyone 常用 their 指代（单数 they），以避免性别偏见。" },
+                            { question: "Neither of the boys finished ___ homework on time.", options: ["his", "their", "its"], answer: 0, feedback: "neither 是单数，传统上用 his（泛指），也可用 their（非正式）。此处优选 his。" }
+                        ]
+                    },
+                '句子语序错误': {
+                title: '📏 句子语序',
+                content: '英语句子的基本语序是 SVO（主语 + 动词 + 宾语）。疑问句需倒装（助动词提前），形容词放在名词前，副词位置灵活但通常不插入动词与宾语之间。',
+                examples: [
+                    '✅ I **like apples**.                （SVO 正常语序）',
+                    '❌ I **apples like**.               （宾语误放动词前）',
+                    '✅ **Do you** like apples?           （疑问句：助动词提前）',
+                    '❌ **You do** like apples?           （疑问句缺少倒装）',
+                    '✅ She **often goes** to the park.   （副词在动词前）',
+                    '❌ She goes often to the park.       （副词位置不当）',
+                    '✅ I have **already finished**.      （副词在助动词后）'
+                ],
                 exercises: [
-                    { question: "To improve grammar, you should ___ daily.", options: ["practice", "practices", "practicing"], answer: 0, feedback: "情态动词 should 后接动词原形 practice。" },
-                    { question: "Which sentence is correct?", options: ["He don't like coffee.", "He doesn't like coffee.", "He not like coffee."], answer: 1, feedback: "第三人称单数否定用 doesn't + 动词原形。" },
-                    { question: "Choose the correct form: She ___ to school every day.", options: ["go", "goes", "going"], answer: 1, feedback: "主语 She 是第三人称单数，一般现在时动词加 es。" },
-                    { question: "Which sentence uses correct word order?", options: ["I always am happy.", "I am always happy.", "Always I am happy."], answer: 1, feedback: "频度副词 always 放在 be 动词之后。" },
-                    { question: "Choose the correct comparative: This book is ___ than that one.", options: ["more interesting", "interestinger", "most interesting"], answer: 0, feedback: "多音节形容词的比较级用 more + 形容词原形。" }
+                    { question: "She ___ to school every day.", options: ["goes", "every day goes", "to school goes"], answer: 0, feedback: "正常语序：主语 + 动词 + 地点状语。She goes to school every day." },
+                    { question: "___ you ever been to Paris?", options: ["Have", "Did", "You have"], answer: 0, feedback: "疑问句需助动词提前倒装。Have you ever been to Paris?" },
+                    { question: "I ___ my homework yesterday.", options: ["finished", "did finished", "yesterday finished"], answer: 0, feedback: "正常语序：主语 + 动词 + 宾语 + 时间状语。I finished my homework yesterday." },
+                    { question: "He ___ plays tennis on Sundays.", options: ["often", "plays often", "tennis often"], answer: 0, feedback: "频度副词通常放在实义动词之前。He often plays tennis on Sundays." },
+                    { question: "Which sentence has correct word order?", options: ["Always I am happy.", "I am always happy.", "I always am happy."], answer: 1, feedback: "频度副词放在 be 动词之后。I am always happy." }
+                ],
+            },
+                '名词使用错误': {
+                title: '📦 名词使用',
+                content: '英语名词分为可数名词和不可数名词。可数名词有单复数形式，不可数名词没有复数形式，不能直接加 s，也不与 a/an 连用。专有名词（人名、地名、机构名等）首字母需大写。',
+                examples: [
+                    '✅ I need some **information**.        （information 不可数，不加 s）',
+                    '❌ I need some **informations**.        （不可数名词误加 s）',
+                    '✅ She gave me a piece of **advice**.   （advice 不可数，用 a piece of）',
+                    '❌ She gave me an **advice**.           （不可数名词前误加 a/an）',
+                    '✅ There are many **books** on the desk. （可数名词复数加 s）',
+                    '✅ I visited **London** last year.       （专有名词首字母大写）',
+                    '❌ I visited **london** last year.       （专有名词未大写）'
+                ],
+                exercises: [
+                    { question: "I need some ___ about the train schedule.", options: ["informations", "information", "an information"], answer: 1, feedback: "information 是不可数名词，不能加 s，也不能与 an 连用。" },
+                    { question: "She gave me two pieces of useful ___.", options: ["advices", "advice", "an advice"], answer: 1, feedback: "advice 是不可数名词，用 a piece of advice 表示'一条建议'。" },
+                    { question: "There are many ___ playing in the park.", options: ["child", "childs", "children"], answer: 2, feedback: "child 的复数是不规则变化 children，不是 childs。" },
+                    { question: "He bought three ___ from the store.", options: ["furnitures", "furniture", "pieces of furniture"], answer: 2, feedback: "furniture 是不可数名词，表示数量用 a piece of furniture 或 pieces of furniture。" },
+                    { question: "Which sentence is correct?", options: ["She lives in paris.", "She lives in Paris.", "She lives in paris."], answer: 1, feedback: "Paris 是专有名词，首字母必须大写。" }
                 ]
-            }
-        };
-
-        function getByteLength(str) { return new Blob([str]).size; }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function mergeHighlights(text, ltMatches, dmxMatches) {
-            const highlights = [];
-            for (const match of ltMatches) {
-                let start = match.offset;
-                let end = match.offset + match.length;
-                if (start !== undefined && end !== undefined) {
-                    highlights.push({ start, end, source: 'lt', priority: 1, message: match.message, replacements: match.replacements });
+            },
+            '形容词副词使用错误': {
+                title: '🔍 形容词与副词',
+                content: '形容词用于修饰名词或代词，说明事物的性质或特征；副词用于修饰动词、形容词、其他副词或整个句子，说明动作的方式、程度、时间等。常见错误包括混淆形容词和副词、比较级和最高级使用不当、副词位置错误等。',
+                examples: [
+                    '✅ She sings **beautifully**.              （副词修饰动词）',
+                    '❌ She sings **beautiful**.                （误用形容词修饰动词）',
+                    '✅ He is a **careful** driver.             （形容词修饰名词）',
+                    '✅ He drives **carefully**.                （副词修饰动词）',
+                    '✅ This book is **more interesting** than that one.  （比较级）',
+                    '❌ This book is **more better** than that one.       （双重比较级错误）',
+                    '✅ She is the **tallest** girl in class.    （最高级）',
+                    '❌ She is **more tall** than her sister.    （单音节形容词应加 -er）'
+                ],
+                exercises: [
+                    { question: "She speaks English very ___.", options: ["good", "well", "better"], answer: 1, feedback: "修饰动词 speaks 需要用副词 well，good 是形容词不能修饰动词。" },
+                    { question: "This problem is ___ than the last one.", options: ["more difficult", "difficulter", "most difficult"], answer: 0, feedback: "多音节形容词 difficult 的比较级用 more difficult，不是加 -er。" },
+                    { question: "He runs ___ of all the boys in his class.", options: ["faster", "fastest", "the fastest"], answer: 2, feedback: "三者以上比较用最高级，副词最高级前加 the，即 the fastest。" },
+                    { question: "The soup tastes ___.", options: ["deliciously", "delicious", "more deliciously"], answer: 1, feedback: "taste 是感官动词，后接形容词作表语，不是副词。类似用法的还有 smell、sound、look、feel。" },
+                    { question: "Which sentence is correct?", options: ["He drives careful.", "He drives carefully.", "He is a carefully driver."], answer: 1, feedback: "修饰动词 drives 用副词 carefully；修饰名词 driver 用形容词 careful。形容词和副词不能互换。" }
+                ]
+            },
+                '默认': {
+                    title: '💡 语法知识',
+                    content: '此语法问题暂时没有对应的知识卡片，建议查阅相关语法书籍或在线资源进行学习。',
+                    examples: ['建议查阅语法参考书', '多读多写提高语感', '注意句子结构的完整性'],
+                    exercises: [
+                        { question: "To improve grammar, you should ___ daily.", options: ["practice", "practices", "practicing"], answer: 0, feedback: "情态动词 should 后接动词原形 practice。" },
+                        { question: "Which sentence is correct?", options: ["He don't like coffee.", "He doesn't like coffee.", "He not like coffee."], answer: 1, feedback: "第三人称单数否定用 doesn't + 动词原形。" },
+                        { question: "Choose the correct form: She ___ to school every day.", options: ["go", "goes", "going"], answer: 1, feedback: "主语 She 是第三人称单数，一般现在时动词加 es。" },
+                        { question: "Which sentence uses correct word order?", options: ["I always am happy.", "I am always happy.", "Always I am happy."], answer: 1, feedback: "频度副词 always 放在 be 动词之后。" },
+                        { question: "Choose the correct comparative: This book is ___ than that one.", options: ["more interesting", "interestinger", "most interesting"], answer: 0, feedback: "多音节形容词的比较级用 more + 形容词原形。" }
+                    ]
                 }
+            };
+
+            function getByteLength(str) { return new Blob([str]).size; }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
-            for (const match of dmxMatches) {
-                let start = match.start;
-                let end = match.end;
-                if (start !== undefined && end !== undefined) {
-                    highlights.push({ start, end, source: 'dmx', priority: 2, message: match.message, replacements: match.replacements });
+
+            function mergeHighlights(text, ltMatches, dmxMatches) {
+                const highlights = [];
+                for (const match of ltMatches) {
+                    let start = match.offset;
+                    let end = match.offset + match.length;
+                    if (start !== undefined && end !== undefined) {
+                        highlights.push({ start, end, source: 'lt', priority: 1, message: match.message, replacements: match.replacements });
+                    }
                 }
-            }
-            if (highlights.length === 0) return escapeHtml(text);
-            highlights.sort((a, b) => a.start - b.start);
-            const merged = [];
-            for (const h of highlights) {
-                if (merged.length === 0) {
-                    merged.push({ ...h });
-                } else {
-                    const last = merged[merged.length - 1];
-                    if (h.start < last.end) {
-                        if (h.priority < last.priority) {
-                            merged[merged.length - 1] = { ...h };
-                        }
-                    } else {
+                for (const match of dmxMatches) {
+                    let start = match.start;
+                    let end = match.end;
+                    if (start !== undefined && end !== undefined) {
+                        highlights.push({ start, end, source: 'dmx', priority: 2, message: match.message, replacements: match.replacements });
+                    }
+                }
+                if (highlights.length === 0) return escapeHtml(text);
+                highlights.sort((a, b) => a.start - b.start);
+                const merged = [];
+                for (const h of highlights) {
+                    if (merged.length === 0) {
                         merged.push({ ...h });
+                    } else {
+                        const last = merged[merged.length - 1];
+                        if (h.start < last.end) {
+                            if (h.priority < last.priority) {
+                                merged[merged.length - 1] = { ...h };
+                            }
+                        } else {
+                            merged.push({ ...h });
+                        }
                     }
                 }
-            }
-            let result = '';
-            let currentPos = 0;
-            for (const h of merged) {
-                if (h.start > currentPos) {
-                    result += escapeHtml(text.substring(currentPos, h.start));
-                }
-                const errorText = text.substring(h.start, h.end);
-                let titleText = h.message;
-                if (titleText && titleText.length > 150) {
-                    titleText = titleText.substring(0, 150) + '...';
-                }
-                if (h.replacements && h.replacements.length > 0 && h.replacements[0].value) {
-                    titleText += `\n建议修改为: ${h.replacements[0].value}`;
-                }
-                const cssClass = h.source === 'lt' ? 'lt-highlight' : 'dmx-highlight';
-                result += `<mark class="${cssClass}" title="${escapeHtml(titleText || '')}">${escapeHtml(errorText)}</mark>`;
-                currentPos = h.end;
-            }
-            if (currentPos < text.length) {
-                result += escapeHtml(text.substring(currentPos));
-            }
-            return result;
-        }
-
-        function updateHighlight() {
-            const text = getEditorText();
-            if ((!lastLTMatches || lastLTMatches.length === 0) && (!lastDMXMatches || lastDMXMatches.length === 0) || !text.trim()) {
-                const plainHtml = escapeHtml(text);
-                if (inputEditor.innerHTML !== plainHtml) {
-                    inputEditor.innerHTML = plainHtml;
-                }
-                return;
-            }
-            const highlightedHtml = mergeHighlights(text, lastLTMatches, lastDMXMatches);
-            if (inputEditor.innerHTML !== highlightedHtml) {
-                inputEditor.innerHTML = highlightedHtml;
-            }
-        }
-
-        // ========== LanguageTool 专用：关键词 + 正则匹配 ==========
-        const errorTypeMappings = [
-            {
-                keywords: ['主谓一致', 'subject-verb agreement', 'subject verb agreement',
-                           'third-person', 'singular verb', 'plural verb', 'agree with the subject',
-                           'agreement'],
-                patterns: [
-                    /pronoun ['"](I|He|She|It|We|You|They)['"] (is|are|was|were|should be|must be|is usually|is often) used with/i,
-                    /third-person (singular )?verb/i,
-                    /subject-verb agreement/i,
-                    /agreement: (subject|verb)/i,
-                    /(agreement error)/i,
-                    /the\s+subject\s+['""]?\w+['""]?\s+should\s+be\s+followed\s+by/i,
-                    /should\s+agree\s+with\s+the\s+subject/i,
-                    /\bagree\s+with\s+the\s+subject\b/i,
-                    /\brequires?\s+['""]?\w+['""]?\s+to\s+agree\s+with\s+the\s+subject/i,
-                    /requires?\s+['""]?[a-zA-Z]+['""]?\b.*\bto\s+agree\s+with/i,
-                    /\bnot\s+['""]?[a-zA-Z]+s['""]?/i,
-                    /\b(subject|pronoun)\b.*\bshould\b.*\bbase\s+form\b/i,
-                    /use\s+(a\s+)?(first|second|third)[-\s]?(person\s+)?(plural|singular)\s+verb\s+with\s+['""]?\w+['""]?/i,
-                    /the\s+singular\s+proper\s+name\s+['""]?\w+['""]?\s+must\s+be\s+used\s+with\s+(a\s+)?(third-person|past\s+tense)/i,
-                    /the\s+subject\s+['""]?\w+['""]?\s+requires\s+the\s+(plural|singular)\s+form\s+of\s+the\s+verb\s+['""]?to\s+be['""]?,\s+which\s+is\s+['""]?\w+['""]?/i,
-                    /the\s+subject\s+['""]?\w+['""]?\s+is\s+singular,\s+so\s+the\s+verb\s+should\s+be\s+['""]?(is|was)['""]?/i,
-                    /the\s+subject\s+['""]?\w+['""]?\s+is\s+singular,\s+so\s+the\s+verb\s+should\s+be\s+['""]?\w+['""]?/i,
-                    /(the\s+subject\s+['""]?\w+['""]?\s+is\s+singular|the\s+subject\s+['""]?\w+['""]?\s+requires\s+the\s+(plural|singular)\s+form|the\s+singular\s+proper\s+name\s+['""]?\w+['""]?\s+must\s+be\s+used\s+with|use\s+(a\s+)?(first|second|third)[-\s]?(person\s+)?(plural|singular)\s+verb\s+with)/i
-                ],
-                type: '主谓一致问题'
-            },
-            {
-                keywords: ['冠词', 'article', 'indefinite article', 'definite article',
-                           'a an', 'use a instead', 'use an instead', 'missing article',
-                           'article error', 'wrong article'],
-                patterns: [
-                    /use\W*[""']?(a|an)[""']?\W+instead\W+of\W+[""']?(a|an)[""']?/i,
-                    /article.*\b(a|an|the)\b.*vowel\s*sound/i,
-                    /indefinite\s+article/i,
-                    /definite\s+article/i,
-                    /missing\s+article/i
-                ],
-                type: '冠词使用错误'
-            },
-            {
-                keywords: ['时态', 'tense', 'past tense', 'present tense', 'future tense',
-                           'verb tense', 'tense error', 'wrong tense', 'tense consistency'],
-                patterns: [
-                    /past\s+tense/i,
-                    /present\s+tense/i,
-                    /future\s+tense/i,
-                    /tense\s+(error|mistake|issue|problem)/i,
-                    /verb\s+tense/i,
-                    /tense\s+consistency/i
-                ],
-                type: '时态问题'
-            },
-            {
-                keywords: ['拼写', 'spelling', 'misspelled', 'spelling error',
-                           'spell check', 'typo', 'misspelling'],
-                patterns: [
-                    /spelling\s+(error|mistake|issue)/i,
-                    /misspell/i,
-                    /typo/i
-                ],
-                type: '拼写问题'
-            },
-            {
-                keywords: ['标点', 'punctuation', 'comma', 'period', 'question mark',
-                           'quotation mark', 'apostrophe', 'semicolon', 'colon',
-                           'punctuation error', 'missing comma', 'extra comma'],
-                patterns: [
-                    /punctuation\s+(error|mark|issue)/i,
-                    /missing\s+(comma|period|question\s*mark)/i,
-                    /extra\s+(comma|period)/i,
-                    /(comma|semicolon|colon|apostrophe)\s+(error|issue|usage)/i
-                ],
-                type: '标点符号'
-            },
-            {
-                keywords: ['情态', '助动', 'modal verb', 'auxiliary verb', 'do does did',
-                           'base form', 'requires the base form',
-                           'after must', 'after can', 'after may', 'after should',
-                           'after could', 'after will', 'after would', 'after shall',
-                           'after do', 'after does', 'after did',
-                           'modal_auxiliary_verb', 'modal'],
-                patterns: [
-                    /(modal|auxiliary)\s+verb.*(base\s+form|原形)/i,
-                    /(auxiliary\s+verb|助动词).*(requires?\s+the\s+base\s+form)/i,
-                    /requires?\s+the\s+base\s+form\s+of\s+the\s+verb/i,
-                    /after\s+['"]?(must|can|could|may|might|will|would|shall|should|do|does|did)['"]?/i,
-                    /\b(do|does|did)\b.*\bbase\s+form\b/i
-                ],
-                type: '情态动词/助动词使用错误'
-            },
-            {
-            keywords: ['代词', 'pronoun', 'pronoun case', 'subject pronoun', 'object pronoun',
-                    'possessive pronoun', 'personal pronoun', 'him', 'her', 'me', 'us', 'them',
-                    'pronoun agreement', 'its their'],
-            patterns: [
-                /pronoun\s+case/i,
-                /subject\s+pronoun.*cannot\s+be\s+used\s+as\s+(an\s+)?object/i,
-                /object\s+pronoun.*required/i,
-                /(possessive|personal)\s+pronoun/i,
-                /'(he|him|she|her|it|they|them|we|us|I|me)'\s+is\s+(a\s+)?(subject|object)\s+pronoun/i,
-                /pronoun\s+agreement/i,
-                /'(its|their)'\s+.*\b(singular|plural)\b/i
-            ],
-            type: '代词使用错误'
-        },
-        {
-            keywords: ['语序', 'word order', 'inverted', 'inversion', 'adverb position',
-                    'adjective order', 'svo', 'sentence structure', 'misplaced'],
-            patterns: [
-                /word\s+order/i,
-                /\b(inversion|inverted)\s+(error|mistake|required|needed)/i,
-                /adverb\s+(position|placement|order)/i,
-                /adjective\s+(order|sequence)/i,
-                /misplaced\s+(word|modifier|adverb)/i,
-                /\bauxiliary\s+verb.*\b(before|after)\b.*\bsubject\b/i
-            ],
-            type: '句子语序错误'
-        },
-        {
-            keywords: ['名词', 'noun', 'countable', 'uncountable', 'plural', 'singular noun',
-                    'proper noun', 'capitalization', 'uncountable noun', 'plural form',
-                    'irregular plural', 'mass noun'],
-            patterns: [
-                /\b(countable|uncountable|mass)\s+noun\b/i,
-                /(uncountable\s+)?noun.*plural/i,
-                /proper\s+noun.*capital/i,
-                /capitali[sz]ation.*(error|mistake|proper\s+noun)/i,
-                /(irregular\s+)?plural\s+(form|noun)/i,
-                /\b(singular|plural)\s+form\s+of\s+(the\s+)?noun\b/i,
-                /(this|that)\s+(are|were)/i,
-                /(these|those)\s+(is|was)/i
-            ],
-            type: '名词使用错误'
-        },
-        {
-            keywords: ['形容词', '副词', 'adjective', 'adverb', 'comparative', 'superlative',
-                    'adjective adverb confusion', 'modifier', 'degree',
-                    'double comparative', 'double superlative'],
-            patterns: [
-                /(adjective|adverb)\s+(confusion|error|mistake)/i,
-                /(comparative|superlative)\s+(form|error|mistake)/i,
-                /double\s+(comparative|superlative)/i,
-                /(adjective|adverb).*(instead|rather than|should be)/i,
-                /\b(more\s+\w+er|most\s+\w+est)\b/i,
-                /(modifier|modifiy)\s+(noun|verb|adjective|adverb)/i,
-                /(good|bad).*(adverb|modif)/i
-            ],
-            type: '形容词副词使用错误'
-        }
-        ];
-
-        // ========== 知识卡片映射 ==========
-        const knowledgeCardMappings = {
-            '主谓一致问题': '主谓一致问题',
-            '冠词使用错误': '冠词使用错误',
-            '时态问题': '时态问题',
-            '拼写问题': '拼写问题',
-            '标点符号': '标点符号',
-            '代词使用错误': '代词使用错误',
-            '情态动词/助动词使用错误': '情态动词/助动词使用错误',
-            '句子语序错误': '句子语序错误',
-            '形容词副词使用错误': '形容词副词使用错误',
-            '名词使用错误': '名词使用错误'
-        };
-
-        // ========== DMX AI 专用：error_type 直接映射，不做关键词/正则匹配 ==========
-        const dmxErrorTypeMap = {
-            'agreement': '主谓一致问题',
-            'article': '冠词使用错误',
-            'tense': '时态问题',
-            'spelling': '拼写问题',
-            'punctuation': '标点符号',
-            'modal_auxiliary_verb': '情态动词/助动词使用错误',
-            'pronoun': '代词使用错误', 
-            'other': '语法知识',
-            'sentence_order': '句子语序错误',
-            'adjective_adverb': '形容词副词使用错误',
-            'noun': '名词使用错误'
-        };
-
-        // ========== LanguageTool 专用：关键词 + 正则识别 ==========
-        function identifyErrorType(message, errorType = '') {
-            const fullText = (message + ' ' + errorType).toLowerCase();
-            for (const mapping of errorTypeMappings) {
-                if (mapping.keywords.some(keyword => fullText.includes(keyword.toLowerCase()))) {
-                    return mapping.type;
-                }
-                if (mapping.patterns && mapping.patterns.some(pattern => pattern.test(message))) {
-                    return mapping.type;
-                }
-            }
-            return '语法知识';
-        }
-
-        // ========== DMX AI 专用：直接查映射表 ==========
-        function getDMXIssueType(err) {
-            const errorType = (err.error_type || '').toLowerCase();
-            return dmxErrorTypeMap[errorType] || '语法知识';
-        }
-
-        function getKnowledgeForIssueType(issueType) {
-            const cardKey = knowledgeCardMappings[issueType] || '默认';
-            return knowledgeBase[cardKey] || knowledgeBase['默认'];
-        }
-
-        function renderExercises(exercises, cardUniqueId) {
-            if (!exercises || exercises.length === 0) return '';
-            let html = `<div class="exercise-section"><div class="exercise-title">📝 专项练习 (共${exercises.length}题，点击核对答案)</div>`;
-            exercises.forEach((ex, idx) => {
-                const optionGroupName = `q_${cardUniqueId}_${idx}`;
-                html += `
-                    <div class="exercise-item" data-exercise-index="${idx}" data-card-id="${cardUniqueId}">
-                        <div class="exercise-question">${idx+1}. ${escapeHtml(ex.question)}</div>
-                        <div class="exercise-options" data-group="${optionGroupName}">
-                            ${ex.options.map((opt, optIdx) => `
-                                <label class="exercise-option">
-                                    <input type="radio" name="${optionGroupName}" value="${optIdx}">
-                                    <span>${escapeHtml(opt)}</span>
-                                </label>
-                            `).join('')}
-                        </div>
-                        <button class="check-answer-btn" data-card-id="${cardUniqueId}" data-ex-idx="${idx}">核对答案</button>
-                        <div class="exercise-feedback" data-feedback-idx="${idx}"></div>
-                    </div>
-                `;
-            });
-            html += `</div>`;
-            return html;
-        }
-
-        let exercisesDataMap = new Map();
-
-        function generateKnowledgeCards(issueTypes) {
-            const uniqueTypes = [...new Set(issueTypes)];
-            let cardsHtml = '';
-            exercisesDataMap.clear();
-            uniqueTypes.forEach((type, index) => {
-                const knowledge = getKnowledgeForIssueType(type);
-                const cardId = `card-${index}-${Date.now()}-${Math.random()}`;
-                const exampleHtml = knowledge.examples.map(ex => ex.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>');
-                let exercisesHtml = '';
-                if (knowledge.exercises && knowledge.exercises.length) {
-                    exercisesHtml = renderExercises(knowledge.exercises, cardId);
-                    knowledge.exercises.forEach((ex, exIdx) => {
-                        const key = `${cardId}_${exIdx}`;
-                        exercisesDataMap.set(key, { answer: ex.answer, feedback: ex.feedback, options: ex.options });
-                    });
-                } else {
-                    exercisesHtml = `<div class="exercise-section"><div class="exercise-title">📚 暂无专项练习，请参考语法示例</div></div>`;
-                }
-                cardsHtml += `
-                    <div class="knowledge-card" id="${cardId}" data-card-type="${type}">
-                        <div class="card-type">${escapeHtml(type)}</div>
-                        <h3>${knowledge.title}</h3>
-                        <button class="back-to-top-btn">返回顶部</button>
-                        <div class="card-content">${knowledge.content}</div>
-                        <div class="example">${exampleHtml}</div>
-                        ${exercisesHtml}
-                    </div>
-                `;
-            });
-            knowledgeCardsContainer.innerHTML = cardsHtml;
-            attachExerciseEvents();
-        }
-
-        function attachExerciseEvents() {
-            document.querySelectorAll('.check-answer-btn').forEach(btn => {
-                btn.removeEventListener('click', handleCheckAnswer);
-                btn.addEventListener('click', handleCheckAnswer);
-            });
-            document.querySelectorAll('.back-to-top-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                });
-            });
-        }
-
-        function handleCheckAnswer(e) {
-            const btn = e.currentTarget;
-            const cardId = btn.getAttribute('data-card-id');
-            const exIdx = parseInt(btn.getAttribute('data-ex-idx'));
-            if (isNaN(exIdx)) return;
-            const exerciseItem = btn.closest('.exercise-item');
-            if (!exerciseItem) return;
-            const selectedRadio = exerciseItem.querySelector('input[type="radio"]:checked');
-            const feedbackDiv = exerciseItem.querySelector('.exercise-feedback');
-            if (!feedbackDiv) return;
-            const key = `${cardId}_${exIdx}`;
-            const exerciseData = exercisesDataMap.get(key);
-            if (!exerciseData) {
-                feedbackDiv.textContent = "题目数据错误，请刷新重试。";
-                feedbackDiv.classList.add('wrong-feedback');
-                return;
-            }
-            if (!selectedRadio) {
-                feedbackDiv.textContent = "请先选择一个选项！";
-                feedbackDiv.classList.add('wrong-feedback');
-                return;
-            }
-            const selectedVal = parseInt(selectedRadio.value);
-            const isCorrect = (selectedVal === exerciseData.answer);
-            if (isCorrect) {
-                feedbackDiv.innerHTML = `✅ 回答正确！ ${escapeHtml(exerciseData.feedback || '很棒！')}`;
-                feedbackDiv.classList.remove('wrong-feedback');
-                feedbackDiv.classList.add('correct-feedback');
-            } else {
-                const correctOptionText = (exerciseData.options && exerciseData.options[exerciseData.answer]) ? exerciseData.options[exerciseData.answer] : '正确答案';
-                feedbackDiv.innerHTML = `❌ 回答错误。正确答案是 "${escapeHtml(correctOptionText)}"。 ${escapeHtml(exerciseData.feedback || '再试试看！')}`;
-                feedbackDiv.classList.remove('correct-feedback');
-                feedbackDiv.classList.add('wrong-feedback');
-            }
-        }
-
-        function clearKnowledgeCards() {
-            knowledgeCardsContainer.innerHTML = '';
-            exercisesDataMap.clear();
-        }
-
-        function scrollToCard(issueType) {
-            const cards = document.querySelectorAll('.knowledge-card');
-            let target = null;
-            for (const card of cards) {
-                if (card.getAttribute('data-card-type') === issueType) { target = card; break; }
-            }
-            if (target) {
-                document.querySelectorAll('.knowledge-card').forEach(c => c.classList.remove('highlight-card'));
-                target.classList.add('highlight-card');
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                setTimeout(() => target.classList.remove('highlight-card'), 3000);
-            } else {
-                const msg = document.createElement('div');
-                msg.textContent = `未找到"${issueType}"卡片`;
-                msg.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#ff9800; color:white; padding:8px 16px; border-radius:8px; z-index:1000;';
-                document.body.appendChild(msg);
-                setTimeout(() => msg.remove(), 2000);
-            }
-        }
-
-        function convertDMXToMatches(dmxData, originalText) {
-            const matches = [];
-            if (!dmxData.errors || dmxData.errors.length === 0) return matches;
-            for (const err of dmxData.errors) {
-                const fragment = err.original_fragment || '';
-                if (!fragment) continue;
-                let idx = originalText.indexOf(fragment);
-                if (idx === -1) {
-                    const regex = new RegExp(`\\b${fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-                    const match = originalText.match(regex);
-                    if (match) {
-                        idx = match.index;
+                let result = '';
+                let currentPos = 0;
+                for (const h of merged) {
+                    if (h.start > currentPos) {
+                        result += escapeHtml(text.substring(currentPos, h.start));
                     }
+                    const errorText = text.substring(h.start, h.end);
+                    let titleText = h.message;
+                    if (titleText && titleText.length > 150) {
+                        titleText = titleText.substring(0, 150) + '...';
+                    }
+                    if (h.replacements && h.replacements.length > 0 && h.replacements[0].value) {
+                        titleText += `\n建议修改为: ${h.replacements[0].value}`;
+                    }
+                    const cssClass = h.source === 'lt' ? 'lt-highlight' : 'dmx-highlight';
+                    result += `<mark class="${cssClass}" title="${escapeHtml(titleText || '')}">${escapeHtml(errorText)}</mark>`;
+                    currentPos = h.end;
                 }
-                if (idx !== -1) {
-                    matches.push({
-                        start: idx,
-                        end: idx + fragment.length,
-                        message: err.explanation || err.error_type || '语法问题',
-                        replacements: [{ value: err.suggestion || '' }],
-                        source: 'dmx'
-                    });
+                if (currentPos < text.length) {
+                    result += escapeHtml(text.substring(currentPos));
                 }
-            }
-            return matches;
-        }
-
-        function formatLTResult(data, originalText) {
-            lastLTMatches = data.matches || [];
-            let result = '';
-            if (!data.matches || data.matches.length === 0) {
-                result += "✨ 暂未发现语法或拼写问题，可等待进阶检测\n";
-                clearKnowledgeCards();
                 return result;
             }
-            result += `📋 共发现 ${data.matches.length} 处语法问题：\n\n`;
-            const issueTypesList = [];
-            data.matches.forEach((match, idx) => {
-                const ctx = match.context?.text || '';
-                const off = match.context?.offset || 0;
-                const len = match.context?.length || 0;
-                const errorWord = ctx.substring(off, off+len);
-                const issueType = identifyErrorType(match.message || '', match.rule?.category?.name || '');
-                issueTypesList.push(issueType);
-                result += `${idx+1}. 问题位置: "${escapeHtml(errorWord || '未知')}"\n`;
-                result += `   说明: ${escapeHtml(match.message)}\n`;
-                if (match.replacements?.length) result += `   建议: ${match.replacements.slice(0,5).map(r=>r.value).join('、')}\n`;
-                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${idx}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
-                result += `   ───────────────────────────────\n`;
-            });
-            result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
-            issueTypesList.forEach(type => allIssueTypes.add(type));
-            return result;
-        }
 
-        function formatDMXDetails(dmxData) {
-            if (!dmxData.errors || dmxData.errors.length === 0) return '';
-            let result = `📋 AI 检测发现 ${dmxData.errors.length} 处语法问题：\n\n`;
-            const issueTypesList = [];
-            for (let i = 0; i < dmxData.errors.length; i++) {
-                const err = dmxData.errors[i];
-                const issueType = getDMXIssueType(err);
-                issueTypesList.push(issueType);
-                result += `${i+1}. 问题位置: "${escapeHtml(err.original_fragment || '未知')}"\n`;
-                result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
-                if (err.suggestion) result += `   建议: ${escapeHtml(err.suggestion)}\n`;
-                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${i}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
-                result += `   ───────────────────────────────\n`;
+            function updateHighlight() {
+                const text = getEditorText();
+                if ((!lastLTMatches || lastLTMatches.length === 0) && (!lastDMXMatches || lastDMXMatches.length === 0) || !text.trim()) {
+                    const plainHtml = escapeHtml(text);
+                    if (inputEditor.innerHTML !== plainHtml) {
+                        inputEditor.innerHTML = plainHtml;
+                    }
+                    return;
+                }
+                const highlightedHtml = mergeHighlights(text, lastLTMatches, lastDMXMatches);
+                if (inputEditor.innerHTML !== highlightedHtml) {
+                    inputEditor.innerHTML = highlightedHtml;
+                }
             }
-            result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
-            issueTypesList.forEach(type => allIssueTypes.add(type));
-            if (dmxData.summary) result += `\n📝 ${escapeHtml(dmxData.summary)}`;
-            return result;
-        }
 
-        function formatDMXAppend(dmxData) {
-            if (!dmxData.errors || dmxData.errors.length === 0) return '';
-            let result = '\n\n' + '─'.repeat(40) + '\n✨ AI 进阶提示：\n\n';
-            const issueTypesList = [];
-            for (let i = 0; i < dmxData.errors.length; i++) {
-                const err = dmxData.errors[i];
-                const issueType = getDMXIssueType(err);
-                issueTypesList.push(issueType);
-                result += `${i+1}. 问题位置: "${escapeHtml(err.original_fragment || '未知')}"\n`;
-                result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
-                if (err.suggestion) result += `   建议: ${escapeHtml(err.suggestion)}\n`;
-                result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${i}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
-                result += `   ───────────────────────────────\n`;
+            // ========== LanguageTool 专用：关键词 + 正则匹配 ==========
+            const errorTypeMappings = [
+                {
+                    keywords: ['主谓一致', 'subject-verb agreement', 'subject verb agreement',
+                            'third-person', 'singular verb', 'plural verb', 'agree with the subject',
+                            'agreement'],
+                    patterns: [
+                        /pronoun ['"](I|He|She|It|We|You|They)['"] (is|are|was|were|should be|must be|is usually|is often) used with/i,
+                        /third-person (singular )?verb/i,
+                        /subject-verb agreement/i,
+                        /agreement: (subject|verb)/i,
+                        /(agreement error)/i,
+                        /the\s+subject\s+['""]?\w+['""]?\s+should\s+be\s+followed\s+by/i,
+                        /should\s+agree\s+with\s+the\s+subject/i,
+                        /\bagree\s+with\s+the\s+subject\b/i,
+                        /\brequires?\s+['""]?\w+['""]?\s+to\s+agree\s+with\s+the\s+subject/i,
+                        /requires?\s+['""]?[a-zA-Z]+['""]?\b.*\bto\s+agree\s+with/i,
+                        /\bnot\s+['""]?[a-zA-Z]+s['""]?/i,
+                        /\b(subject|pronoun)\b.*\bshould\b.*\bbase\s+form\b/i,
+                        /use\s+(a\s+)?(first|second|third)[-\s]?(person\s+)?(plural|singular)\s+verb\s+with\s+['""]?\w+['""]?/i,
+                        /the\s+singular\s+proper\s+name\s+['""]?\w+['""]?\s+must\s+be\s+used\s+with\s+(a\s+)?(third-person|past\s+tense)/i,
+                        /the\s+subject\s+['""]?\w+['""]?\s+requires\s+the\s+(plural|singular)\s+form\s+of\s+the\s+verb\s+['""]?to\s+be['""]?,\s+which\s+is\s+['""]?\w+['""]?/i,
+                        /the\s+subject\s+['""]?\w+['""]?\s+is\s+singular,\s+so\s+the\s+verb\s+should\s+be\s+['""]?(is|was)['""]?/i,
+                        /the\s+subject\s+['""]?\w+['""]?\s+is\s+singular,\s+so\s+the\s+verb\s+should\s+be\s+['""]?\w+['""]?/i,
+                        /(the\s+subject\s+['""]?\w+['""]?\s+is\s+singular|the\s+subject\s+['""]?\w+['""]?\s+requires\s+the\s+(plural|singular)\s+form|the\s+singular\s+proper\s+name\s+['""]?\w+['""]?\s+must\s+be\s+used\s+with|use\s+(a\s+)?(first|second|third)[-\s]?(person\s+)?(plural|singular)\s+verb\s+with)/i
+                    ],
+                    type: '主谓一致问题'
+                },
+                {
+                    keywords: ['冠词', 'article', 'indefinite article', 'definite article',
+                            'a an', 'use a instead', 'use an instead', 'missing article',
+                            'article error', 'wrong article'],
+                    patterns: [
+                        /use\W*[""']?(a|an)[""']?\W+instead\W+of\W+[""']?(a|an)[""']?/i,
+                        /article.*\b(a|an|the)\b.*vowel\s*sound/i,
+                        /indefinite\s+article/i,
+                        /definite\s+article/i,
+                        /missing\s+article/i
+                    ],
+                    type: '冠词使用错误'
+                },
+                {
+                    keywords: ['时态', 'tense', 'past tense', 'present tense', 'future tense',
+                            'verb tense', 'tense error', 'wrong tense', 'tense consistency'],
+                    patterns: [
+                        /past\s+tense/i,
+                        /present\s+tense/i,
+                        /future\s+tense/i,
+                        /tense\s+(error|mistake|issue|problem)/i,
+                        /verb\s+tense/i,
+                        /tense\s+consistency/i
+                    ],
+                    type: '时态问题'
+                },
+                {
+                    keywords: ['拼写', 'spelling', 'misspelled', 'spelling error',
+                            'spell check', 'typo', 'misspelling'],
+                    patterns: [
+                        /spelling\s+(error|mistake|issue)/i,
+                        /misspell/i,
+                        /typo/i
+                    ],
+                    type: '拼写问题'
+                },
+                {
+                    keywords: ['标点', 'punctuation', 'comma', 'period', 'question mark',
+                            'quotation mark', 'apostrophe', 'semicolon', 'colon',
+                            'punctuation error', 'missing comma', 'extra comma'],
+                    patterns: [
+                        /punctuation\s+(error|mark|issue)/i,
+                        /missing\s+(comma|period|question\s*mark)/i,
+                        /extra\s+(comma|period)/i,
+                        /(comma|semicolon|colon|apostrophe)\s+(error|issue|usage)/i
+                    ],
+                    type: '标点符号'
+                },
+                {
+                    keywords: ['情态', '助动', 'modal verb', 'auxiliary verb', 'do does did',
+                            'base form', 'requires the base form',
+                            'after must', 'after can', 'after may', 'after should',
+                            'after could', 'after will', 'after would', 'after shall',
+                            'after do', 'after does', 'after did',
+                            'modal_auxiliary_verb', 'modal'],
+                    patterns: [
+                        /(modal|auxiliary)\s+verb.*(base\s+form|原形)/i,
+                        /(auxiliary\s+verb|助动词).*(requires?\s+the\s+base\s+form)/i,
+                        /requires?\s+the\s+base\s+form\s+of\s+the\s+verb/i,
+                        /after\s+['"]?(must|can|could|may|might|will|would|shall|should|do|does|did)['"]?/i,
+                        /\b(do|does|did)\b.*\bbase\s+form\b/i
+                    ],
+                    type: '情态动词/助动词使用错误'
+                },
+                {
+                keywords: ['代词', 'pronoun', 'pronoun case', 'subject pronoun', 'object pronoun',
+                        'possessive pronoun', 'personal pronoun', 'him', 'her', 'me', 'us', 'them',
+                        'pronoun agreement', 'its their'],
+                patterns: [
+                    /pronoun\s+case/i,
+                    /subject\s+pronoun.*cannot\s+be\s+used\s+as\s+(an\s+)?object/i,
+                    /object\s+pronoun.*required/i,
+                    /(possessive|personal)\s+pronoun/i,
+                    /'(he|him|she|her|it|they|them|we|us|I|me)'\s+is\s+(a\s+)?(subject|object)\s+pronoun/i,
+                    /pronoun\s+agreement/i,
+                    /'(its|their)'\s+.*\b(singular|plural)\b/i
+                ],
+                type: '代词使用错误'
+            },
+            {
+                keywords: ['语序', 'word order', 'inverted', 'inversion', 'adverb position',
+                        'adjective order', 'svo', 'sentence structure', 'misplaced'],
+                patterns: [
+                    /word\s+order/i,
+                    /\b(inversion|inverted)\s+(error|mistake|required|needed)/i,
+                    /adverb\s+(position|placement|order)/i,
+                    /adjective\s+(order|sequence)/i,
+                    /misplaced\s+(word|modifier|adverb)/i,
+                    /\bauxiliary\s+verb.*\b(before|after)\b.*\bsubject\b/i
+                ],
+                type: '句子语序错误'
+            },
+            {
+                keywords: ['名词', 'noun', 'countable', 'uncountable', 'plural', 'singular noun',
+                        'proper noun', 'capitalization', 'uncountable noun', 'plural form',
+                        'irregular plural', 'mass noun'],
+                patterns: [
+                    /\b(countable|uncountable|mass)\s+noun\b/i,
+                    /(uncountable\s+)?noun.*plural/i,
+                    /proper\s+noun.*capital/i,
+                    /capitali[sz]ation.*(error|mistake|proper\s+noun)/i,
+                    /(irregular\s+)?plural\s+(form|noun)/i,
+                    /\b(singular|plural)\s+form\s+of\s+(the\s+)?noun\b/i,
+                    /(this|that)\s+(are|were)/i,
+                    /(these|those)\s+(is|was)/i
+                ],
+                type: '名词使用错误'
+            },
+            {
+                keywords: ['形容词', '副词', 'adjective', 'adverb', 'comparative', 'superlative',
+                        'adjective adverb confusion', 'modifier', 'degree',
+                        'double comparative', 'double superlative'],
+                patterns: [
+                    /(adjective|adverb)\s+(confusion|error|mistake)/i,
+                    /(comparative|superlative)\s+(form|error|mistake)/i,
+                    /double\s+(comparative|superlative)/i,
+                    /(adjective|adverb).*(instead|rather than|should be)/i,
+                    /\b(more\s+\w+er|most\s+\w+est)\b/i,
+                    /(modifier|modifiy)\s+(noun|verb|adjective|adverb)/i,
+                    /(good|bad).*(adverb|modif)/i
+                ],
+                type: '形容词副词使用错误'
             }
-            result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
-            issueTypesList.forEach(type => allIssueTypes.add(type));
-            if (dmxData.summary) result += `\n📝 ${escapeHtml(dmxData.summary)}`;
-            return result;
-        }
+            ];
 
-        async function callDMXAPI(text) {
-            if (!DMX_API_KEY) {
-                console.log('[DMX] 未配置有效令牌');
-                return null;
+            // ========== 知识卡片映射 ==========
+            const knowledgeCardMappings = {
+                '主谓一致问题': '主谓一致问题',
+                '冠词使用错误': '冠词使用错误',
+                '时态问题': '时态问题',
+                '拼写问题': '拼写问题',
+                '标点符号': '标点符号',
+                '代词使用错误': '代词使用错误',
+                '情态动词/助动词使用错误': '情态动词/助动词使用错误',
+                '句子语序错误': '句子语序错误',
+                '形容词副词使用错误': '形容词副词使用错误',
+                '名词使用错误': '名词使用错误'
+            };
+
+            // ========== DMX AI 专用：error_type 直接映射，不做关键词/正则匹配 ==========
+            const dmxErrorTypeMap = {
+                'agreement': '主谓一致问题',
+                'article': '冠词使用错误',
+                'tense': '时态问题',
+                'spelling': '拼写问题',
+                'punctuation': '标点符号',
+                'modal_auxiliary_verb': '情态动词/助动词使用错误',
+                'pronoun': '代词使用错误', 
+                'other': '语法知识',
+                'sentence_order': '句子语序错误',
+                'adjective_adverb': '形容词副词使用错误',
+                'noun': '名词使用错误'
+            };
+
+            // ========== LanguageTool 专用：关键词 + 正则识别 ==========
+            function identifyErrorType(message, errorType = '') {
+                const fullText = (message + ' ' + errorType).toLowerCase();
+                for (const mapping of errorTypeMappings) {
+                    if (mapping.keywords.some(keyword => fullText.includes(keyword.toLowerCase()))) {
+                        return mapping.type;
+                    }
+                    if (mapping.patterns && mapping.patterns.some(pattern => pattern.test(message))) {
+                        return mapping.type;
+                    }
+                }
+                return '语法知识';
             }
+
+            // ========== DMX AI 专用：直接查映射表 ==========
+            function getDMXIssueType(err) {
+                const errorType = (err.error_type || '').toLowerCase();
+                return dmxErrorTypeMap[errorType] || '语法知识';
+            }
+
+            function getKnowledgeForIssueType(issueType) {
+                const cardKey = knowledgeCardMappings[issueType] || '默认';
+                return knowledgeBase[cardKey] || knowledgeBase['默认'];
+            }
+
+            function renderExercises(exercises, cardUniqueId) {
+                if (!exercises || exercises.length === 0) return '';
+                let html = `<div class="exercise-section"><div class="exercise-title">📝 专项练习 (共${exercises.length}题，点击核对答案)</div>`;
+                exercises.forEach((ex, idx) => {
+                    const optionGroupName = `q_${cardUniqueId}_${idx}`;
+                    html += `
+                        <div class="exercise-item" data-exercise-index="${idx}" data-card-id="${cardUniqueId}">
+                            <div class="exercise-question">${idx+1}. ${escapeHtml(ex.question)}</div>
+                            <div class="exercise-options" data-group="${optionGroupName}">
+                                ${ex.options.map((opt, optIdx) => `
+                                    <label class="exercise-option">
+                                        <input type="radio" name="${optionGroupName}" value="${optIdx}">
+                                        <span>${escapeHtml(opt)}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                            <button class="check-answer-btn" data-card-id="${cardUniqueId}" data-ex-idx="${idx}">核对答案</button>
+                            <div class="exercise-feedback" data-feedback-idx="${idx}"></div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                return html;
+            }
+
+            let exercisesDataMap = new Map();
+
+            function generateKnowledgeCards(issueTypes) {
+                const uniqueTypes = [...new Set(issueTypes)];
+                let cardsHtml = '';
+                exercisesDataMap.clear();
+                uniqueTypes.forEach((type, index) => {
+                    const knowledge = getKnowledgeForIssueType(type);
+                    const cardId = `card-${index}-${Date.now()}-${Math.random()}`;
+                    const exampleHtml = knowledge.examples.map(ex => ex.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')).join('<br>');
+                    let exercisesHtml = '';
+                    if (knowledge.exercises && knowledge.exercises.length) {
+                        exercisesHtml = renderExercises(knowledge.exercises, cardId);
+                        knowledge.exercises.forEach((ex, exIdx) => {
+                            const key = `${cardId}_${exIdx}`;
+                            exercisesDataMap.set(key, { answer: ex.answer, feedback: ex.feedback, options: ex.options });
+                        });
+                    } else {
+                        exercisesHtml = `<div class="exercise-section"><div class="exercise-title">📚 暂无专项练习，请参考语法示例</div></div>`;
+                    }
+                    cardsHtml += `
+                        <div class="knowledge-card" id="${cardId}" data-card-type="${type}">
+                            <div class="card-type">${escapeHtml(type)}</div>
+                            <h3>${knowledge.title}</h3>
+                            <button class="back-to-top-btn">返回顶部</button>
+                            <div class="card-content">${knowledge.content}</div>
+                            <div class="example">${exampleHtml}</div>
+                            ${exercisesHtml}
+                        </div>
+                    `;
+                });
+                knowledgeCardsContainer.innerHTML = cardsHtml;
+                attachExerciseEvents();
+            }
+
+            function attachExerciseEvents() {
+                document.querySelectorAll('.check-answer-btn').forEach(btn => {
+                    btn.removeEventListener('click', handleCheckAnswer);
+                    btn.addEventListener('click', handleCheckAnswer);
+                });
+                document.querySelectorAll('.back-to-top-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                });
+            }
+
+            function handleCheckAnswer(e) {
+                const btn = e.currentTarget;
+                const cardId = btn.getAttribute('data-card-id');
+                const exIdx = parseInt(btn.getAttribute('data-ex-idx'));
+                if (isNaN(exIdx)) return;
+                const exerciseItem = btn.closest('.exercise-item');
+                if (!exerciseItem) return;
+                const selectedRadio = exerciseItem.querySelector('input[type="radio"]:checked');
+                const feedbackDiv = exerciseItem.querySelector('.exercise-feedback');
+                if (!feedbackDiv) return;
+                const key = `${cardId}_${exIdx}`;
+                const exerciseData = exercisesDataMap.get(key);
+                if (!exerciseData) {
+                    feedbackDiv.textContent = "题目数据错误，请刷新重试。";
+                    feedbackDiv.classList.add('wrong-feedback');
+                    return;
+                }
+                if (!selectedRadio) {
+                    feedbackDiv.textContent = "请先选择一个选项！";
+                    feedbackDiv.classList.add('wrong-feedback');
+                    return;
+                }
+                const selectedVal = parseInt(selectedRadio.value);
+                const isCorrect = (selectedVal === exerciseData.answer);
+                if (isCorrect) {
+                    feedbackDiv.innerHTML = `✅ 回答正确！ ${escapeHtml(exerciseData.feedback || '很棒！')}`;
+                    feedbackDiv.classList.remove('wrong-feedback');
+                    feedbackDiv.classList.add('correct-feedback');
+                } else {
+                    const correctOptionText = (exerciseData.options && exerciseData.options[exerciseData.answer]) ? exerciseData.options[exerciseData.answer] : '正确答案';
+                    feedbackDiv.innerHTML = `❌ 回答错误。正确答案是 "${escapeHtml(correctOptionText)}"。 ${escapeHtml(exerciseData.feedback || '再试试看！')}`;
+                    feedbackDiv.classList.remove('correct-feedback');
+                    feedbackDiv.classList.add('wrong-feedback');
+                }
+            }
+
+            function clearKnowledgeCards() {
+                knowledgeCardsContainer.innerHTML = '';
+                exercisesDataMap.clear();
+            }
+
+            function scrollToCard(issueType) {
+                const cards = document.querySelectorAll('.knowledge-card');
+                let target = null;
+                for (const card of cards) {
+                    if (card.getAttribute('data-card-type') === issueType) { target = card; break; }
+                }
+                if (target) {
+                    document.querySelectorAll('.knowledge-card').forEach(c => c.classList.remove('highlight-card'));
+                    target.classList.add('highlight-card');
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    setTimeout(() => target.classList.remove('highlight-card'), 3000);
+                } else {
+                    const msg = document.createElement('div');
+                    msg.textContent = `未找到"${issueType}"卡片`;
+                    msg.style.cssText = 'position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#ff9800; color:white; padding:8px 16px; border-radius:8px; z-index:1000;';
+                    document.body.appendChild(msg);
+                    setTimeout(() => msg.remove(), 2000);
+                }
+            }
+
+            function convertDMXToMatches(dmxData, originalText) {
+                const matches = [];
+                if (!dmxData.errors || dmxData.errors.length === 0) return matches;
+                for (const err of dmxData.errors) {
+                    const fragment = err.original_fragment || '';
+                    if (!fragment) continue;
+                    let idx = originalText.indexOf(fragment);
+                    if (idx === -1) {
+                        const regex = new RegExp(`\\b${fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                        const match = originalText.match(regex);
+                        if (match) {
+                            idx = match.index;
+                        }
+                    }
+                    if (idx !== -1) {
+                        matches.push({
+                            start: idx,
+                            end: idx + fragment.length,
+                            message: err.explanation || err.error_type || '语法问题',
+                            replacements: [{ value: err.suggestion || '' }],
+                            source: 'dmx'
+                        });
+                    }
+                }
+                return matches;
+            }
+
+            function formatLTResult(data, originalText) {
+                lastLTMatches = data.matches || [];
+                let result = '';
+                if (!data.matches || data.matches.length === 0) {
+                    result += "✨ 暂未发现语法或拼写问题，可等待进阶检测\n";
+                    clearKnowledgeCards();
+                    return result;
+                }
+                result += `📋 共发现 ${data.matches.length} 处语法问题：\n\n`;
+                const issueTypesList = [];
+                data.matches.forEach((match, idx) => {
+                    const ctx = match.context?.text || '';
+                    const off = match.context?.offset || 0;
+                    const len = match.context?.length || 0;
+                    const errorWord = ctx.substring(off, off+len);
+                    const issueType = identifyErrorType(match.message || '', match.rule?.category?.name || '');
+                    issueTypesList.push(issueType);
+                    result += `${idx+1}. 问题位置: "${escapeHtml(errorWord || '未知')}"\n`;
+                    result += `   说明: ${escapeHtml(match.message)}\n`;
+                    if (match.replacements?.length) result += `   建议: ${match.replacements.slice(0,5).map(r=>r.value).join('、')}\n`;
+                    result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${idx}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
+                    result += `   ───────────────────────────────\n`;
+                });
+                result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
+                issueTypesList.forEach(type => allIssueTypes.add(type));
+                return result;
+            }
+
+            function formatDMXDetails(dmxData) {
+                if (!dmxData.errors || dmxData.errors.length === 0) return '';
+                let result = `📋 AI 检测发现 ${dmxData.errors.length} 处语法问题：\n\n`;
+                const issueTypesList = [];
+                for (let i = 0; i < dmxData.errors.length; i++) {
+                    const err = dmxData.errors[i];
+                    const issueType = getDMXIssueType(err);
+                    issueTypesList.push(issueType);
+                    result += `${i+1}. 问题位置: "${escapeHtml(err.original_fragment || '未知')}"\n`;
+                    result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
+                    if (err.suggestion) result += `   建议: ${escapeHtml(err.suggestion)}\n`;
+                    result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${i}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
+                    result += `   ───────────────────────────────\n`;
+                }
+                result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
+                issueTypesList.forEach(type => allIssueTypes.add(type));
+                if (dmxData.summary) result += `\n📝 ${escapeHtml(dmxData.summary)}`;
+                return result;
+            }
+
+            function formatDMXAppend(dmxData) {
+                if (!dmxData.errors || dmxData.errors.length === 0) return '';
+                let result = '\n\n' + '─'.repeat(40) + '\n✨ AI 进阶提示：\n\n';
+                const issueTypesList = [];
+                for (let i = 0; i < dmxData.errors.length; i++) {
+                    const err = dmxData.errors[i];
+                    const issueType = getDMXIssueType(err);
+                    issueTypesList.push(issueType);
+                    result += `${i+1}. 问题位置: "${escapeHtml(err.original_fragment || '未知')}"\n`;
+                    result += `   说明: ${escapeHtml(err.explanation || '语法问题')}\n`;
+                    if (err.suggestion) result += `   建议: ${escapeHtml(err.suggestion)}\n`;
+                    result += `   类型: <a href="#" class="issue-type-link" data-issue-index="${i}" data-issue-type="${escapeHtml(issueType)}">${escapeHtml(issueType)}</a>\n`;
+                    result += `   ───────────────────────────────\n`;
+                }
+                result += `\n💡 提示：点击问题类型可查看知识卡片，每个卡片包含5道专项练习题。`;
+                issueTypesList.forEach(type => allIssueTypes.add(type));
+                if (dmxData.summary) result += `\n📝 ${escapeHtml(dmxData.summary)}`;
+                return result;
+            }
+
+            async function callDMXAPI(text) {
+                if (!DMX_API_KEY) {
+                    console.log('[DMX] 未配置有效令牌');
+                    return null;
+                }
             const systemPrompt = `You are a strict English grammar checker. Analyze the text and return ONLY valid JSON with this format:
                 {
                 "errors": [
                     {
-                    "original_fragment": "the exact word or phrase that have grammar issues, do not return the whole sentence",
-                    "error_type": "article|pronoun|noun|adjective_adverb|agreement|tense|sentence_order|spelling|punctuation|modal_auxiliary_verb|other",
-                    "explanation": "brief explanation of what is wrong, specifying the grammar rule if possible, no longer than 20 words",
+                    "original_fragment": "the exact word or phrase that has a grammar issue, do not return the whole sentence",
+                    "error_type": "agreement|article|tense|spelling|punctuation|modal_auxiliary_verb|pronoun|word_order|noun|adjective_adverb|other",
+                    "explanation": "(IN CHINESE)brief description of the grammar error, describing the rule violated, no longer than 20 words in Chinese and do not add period at the end",
                     "suggestion": "corrected version"
                     }
                 ],
-                "summary": "one sentence overall feedback in Chinese, just explaining the types of issues and do not give solutions"
+                "summary": "one sentence overall feedback in Chinese"
                 }
                 If no errors, return "errors": [].
-                READ THE CRITICAL CAREFULLLY. DO NOT CONTRADICT WITH THEM!!!!!!!!
-                original fragments includes only key words. Return ONLY JSON, no other text. You may have multiple errors for the same sentence. One error only corresponds to one issue, do not combine multiple issues into one error. Always try to find all possible grammar issues in the text.
+                Return ONLY JSON, no other text.
+                One error only corresponds to one issue. Do not combine multiple issues into one error.
 
-                CRITICAL: "modal_auxiliary_verb" is for errors with modal verbs (can, may, must, should, etc.) AND auxiliary verbs (do, does, did) where the base form is required. "agreement" is for subject-verb agreement (e.g., third-person singular -s). "pronoun" is only for incorrect usage like "teach he". Only use "other" for error types NOT in the list.
-                CRITICAL: issues like "He goes to school, don't he?" is an AGREEMENT error. Only return article error when the article exists. Sentences like "I answer he yesterday" is NOT a sentence_order error. "cannot" is a correct expression. Sentences like "That make me sad" is agreement error. 
-                CRITICAL: adjective_adverb" is for confusion between adjectives and adverbs(sentences like "I play piano good" and "the day ended good" is a adjective_adverb error) OR comparative/superlative errors OR double comparative errors`;
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
-                const response = await fetch(DMX_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DMX_API_KEY}` },
-                    body: JSON.stringify({
-                        model: 'qwen-flash-2025-07-28',//qwen-flash-2025-07-28/deepseek-v4-flash
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: `Please check this English text: ${text.substring(0, 3000)}` }
-                        ],
-                        temperature: 0.2
-                    }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                if (!response.ok) {
-                    console.log('[DMX] API 错误:', response.status);
+            === ANNOTATION RULES ===
+            - Only annotate the exact problematic word or phrase, NOT the entire sentence.
+            Example: For "I likes to go to a school.", annotate "likes" and "a" as separate errors.
+
+            === DETECTION PRINCIPLES ===
+            - When in doubt, DO NOT report. Prefer missing an error over flagging correct text.
+            - If unsure about error_type, use "other". Never force a match into an incorrect category.
+            - Do not report false positives. If text is grammatically acceptable, skip it.
+            - Explanation must describe a real mistake, not state that something is "acceptable".
+            
+            === ERROR TYPE DEFINITIONS (read carefully before classifying) ===
+
+            1. "agreement": SUBJECT-VERB agreement ONLY. The verb form does not match the subject's person/number.
+            Example: "He go" → "He goes", "I likes" → "I like".
+            Do NOT use this for noun plural errors.
+
+            2. "article": Missing, wrong, or unnecessary a/an/the.
+            Example: "She is teacher" → "She is a teacher", "He is best" → "He is the best".
+
+            3. "tense": Wrong verb tense or inconsistency with time markers. The verb tense itself is wrong.
+            Example: "Yesterday I go" → "Yesterday I went", "She has went" → "She has gone".
+            Do NOT use this for "did + past tense" errors — those are modal_auxiliary_verb.
+
+            4. "spelling": The word is misspelled.
+            Example: "recieved" → "received", "definately" → "definitely".
+
+            5. "punctuation": Missing, extra, or wrong punctuation (commas, periods, apostrophes, semicolons, etc.).
+
+            6. "modal_auxiliary_verb": A modal verb (can, may, must, should, could, would) OR auxiliary verb (do, does, did) is followed by the wrong verb form. The verb after these must be the BASE FORM.
+            Example: "She does likes" → "She does like", "He did not went" → "He did not go", "She can goes" → "She can go".
+            KEY RULE: If the error involves "do/does/did + verb", this is modal_auxiliary_verb, NOT tense.
+
+            7. "pronoun": Pronoun case (I/me, he/him, she/her, we/us, they/them), number/gender agreement, or possessive errors.
+            Example: "Give it to he" → "Give it to him", "Me like it" → "I like it".
+
+            8. "word_order": Wrong sentence structure, adverb placement, or missing question inversion.
+            Example: "She goes often there" → "She often goes there".
+
+            9. "noun": Countable/uncountable confusion, wrong plural form, or irregular plural errors. The NOUN itself is wrong.
+            Example: "two book" → "two books", "many child" → "many children", "some informations" → "some information".
+            KEY RULE: If a number/quantifier is followed by the wrong noun form, this is "noun", NOT agreement.
+
+            10. "adjective_adverb": Adjective used where adverb is needed (or vice versa), or comparative/superlative formation errors.
+                Example: "She sings beautiful" → "She sings beautifully", "more taller" → "taller".
+
+            11. "other": Use ONLY when the error does not fit any of the above types.`;
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+                    const response = await fetch(DMX_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DMX_API_KEY}` },
+                        body: JSON.stringify({
+                            model: 'qwen-flash-2025-07-28',
+                            messages: [
+                                { role: 'system', content: systemPrompt },
+                                { role: 'user', content: `Please check this English text: ${text.substring(0, 3000)}` }
+                            ],
+                            temperature: 0.2
+                        }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    if (!response.ok) {
+                        console.log('[DMX] API 错误:', response.status);
+                        return null;
+                    }
+                    const data = await response.json();
+                    const content = data.choices[0].message.content;
+                    const jsonMatch = content.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        return JSON.parse(jsonMatch[0]);
+                    }
+                    return null;
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        console.log('[DMX] 请求超时');
+                    } else {
+                        console.log('[DMX] 调用失败:', error.message);
+                    }
                     return null;
                 }
-                const data = await response.json();
-                const content = data.choices[0].message.content;
-                const jsonMatch = content.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    return JSON.parse(jsonMatch[0]);
-                }
-                return null;
-            } catch (error) {
-                console.log('[DMX] 调用失败:', error.message);
-                return null;
             }
-        }
 
-        function setupOutputLinks() {
-            outputDiv.addEventListener('click', (e) => {
-                const link = e.target.closest('.issue-type-link');
-                if (link && link.dataset.issueIndex !== undefined) {
-                    e.preventDefault();
-                    const issueType = link.dataset.issueType;
-                    scrollToCard(issueType);
-                }
-            });
-        }
-
-        function showError(msg) {
-            outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}`;
-            lastLTMatches = [];
-            lastDMXMatches = [];
-            updateHighlight();
-            clearKnowledgeCards();
-        }
-
-        function updateCheckButtonState() {
-            const has = getEditorText().trim().length > 0;
-            checkBtn.disabled = !has;
-            checkBtn.classList.toggle('button-disabled', !has);
-            checkBtn.classList.toggle('button-enabled', has);
-        }
-
-        function resetAll() {
-            setEditorText('');
-            outputDiv.innerHTML = '语法检查结果将显示在这里...';
-            lastLTMatches = [];
-            lastDMXMatches = [];
-            updateHighlight();
-            updateCheckButtonState();
-            clearKnowledgeCards();
-            firstResultShown = false;
-        }
-
-        async function checkGrammar() {
-            const text = getEditorText();
-            if (!text.trim()) return showError("请输入待检测的文本");
-            if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 ≤ 20KB`);
-            checkBtn.disabled = true;
-            const originalText = checkBtn.innerText;
-            checkBtn.innerText = '检查中...';
-            outputDiv.innerHTML = '正在分析语法...';
-            lastLTMatches = [];
-            lastDMXMatches = [];
-            updateHighlight();
-            clearKnowledgeCards();
-            firstResultShown = false;
-            currentLTData = null;
-            currentDMXAnalysis = null;
-            allIssueTypes.clear();
-            let ltFinished = false;
-            let dmxFinished = false;
-            const ltPromise = (async () => {
-                try {
-                    const params = new URLSearchParams();
-                    params.append('text', text);
-                    params.append('language', 'en');
-                    params.append('enabledOnly', 'false');
-                    const resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
-                    if (!resp.ok) throw new Error(`LanguageTool ${resp.status}`);
-                    const data = await resp.json();
-                    ltFinished = true;
-                    lastLTMatches = data.matches || [];
-                    updateHighlight();
-                    if (!dmxFinished) {
-                        const stats = getWritingStats(text);
-                        outputDiv.innerHTML = getStatsText(stats) + formatLTResult(data, text);
-                        setupOutputLinks();
-                    } else {
-                        const currentContent = outputDiv.innerHTML;
-                        outputDiv.innerHTML = currentContent + '\n\n' + '─'.repeat(50) + '\n\n📋 LanguageTool 详细检测：\n' + formatLTResult(data, text);
-                        setupOutputLinks();
+            function setupOutputLinks() {
+                outputDiv.addEventListener('click', (e) => {
+                    const link = e.target.closest('.issue-type-link');
+                    if (link && link.dataset.issueIndex !== undefined) {
+                        e.preventDefault();
+                        const issueType = link.dataset.issueType;
+                        scrollToCard(issueType);
                     }
-                    // ===== 新增：LT 完成后立即更新知识卡片 =====
-                    generateKnowledgeCards([...allIssueTypes]);
-                } catch (err) {
-                    console.log('LT错误:', err);
-                    ltFinished = true;
-                    if (!dmxFinished) outputDiv.innerHTML = 'LanguageTool 检测失败，正在等待 AI 结果...';
-                }
-            })();
-            const dmxPromise = (async () => {
-                try {
-                    const result = await callDMXAPI(text);
-                    dmxFinished = true;
-                    if (result && result.errors && result.errors.length > 0) {
-                        const dmxHighlights = convertDMXToMatches(result, text);
-                        lastDMXMatches = dmxHighlights;
+                });
+            }
+
+            function showError(msg) {
+                outputDiv.innerHTML = `检测失败：\n${escapeHtml(msg)}`;
+                lastLTMatches = [];
+                lastDMXMatches = [];
+                updateHighlight();
+                clearKnowledgeCards();
+            }
+
+            function updateCheckButtonState() {
+                const has = getEditorText().trim().length > 0;
+                checkBtn.disabled = !has;
+                checkBtn.classList.toggle('button-disabled', !has);
+                checkBtn.classList.toggle('button-enabled', has);
+            }
+
+            function resetAll() {
+                setEditorText('');
+                outputDiv.innerHTML = '语法检查结果将显示在这里...';
+                lastLTMatches = [];
+                lastDMXMatches = [];
+                updateHighlight();
+                updateCheckButtonState();
+                clearKnowledgeCards();
+                firstResultShown = false;
+            }
+
+            async function checkGrammar() {
+                const text = getEditorText();
+                if (!text.trim()) return showError("请输入待检测的文本");
+                if (getByteLength(text) > MAX_BYTES) return showError(`文本过大 (${getByteLength(text)} 字节)，限制 ≤ 20KB`);
+                checkBtn.disabled = true;
+                const originalText = checkBtn.innerText;
+                checkBtn.innerText = '检查中...';
+                outputDiv.innerHTML = '正在分析语法...';
+                lastLTMatches = [];
+                lastDMXMatches = [];
+                updateHighlight();
+                clearKnowledgeCards();
+                firstResultShown = false;
+                currentLTData = null;
+                currentDMXAnalysis = null;
+                allIssueTypes.clear();
+                let ltFinished = false;
+                let dmxFinished = false;
+                const ltPromise = (async () => {
+                    try {
+                        const params = new URLSearchParams();
+                        params.append('text', text);
+                        params.append('language', 'en');
+                        params.append('enabledOnly', 'false');
+                        const resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
+                        if (!resp.ok) throw new Error(`LanguageTool ${resp.status}`);
+                        const data = await resp.json();
+                        ltFinished = true;
+                        lastLTMatches = data.matches || [];
                         updateHighlight();
-                    }
-                    if (!ltFinished) {
-                        const stats = getWritingStats(text);
-                        let dmxOutput = getStatsText(stats) + '✨ AI 智能分析结果：\n\n';
-                        dmxOutput += (result && result.errors && result.errors.length > 0) ? formatDMXDetails(result) : '✨ 未发现语法问题\n';
-                        outputDiv.innerHTML = dmxOutput;
-                        setupOutputLinks();
-                    } else {
-                        const dmxAppend = formatDMXAppend(result);
-                        if (dmxAppend) {
+                        if (!dmxFinished) {
+                            const stats = getWritingStats(text);
+                            outputDiv.innerHTML = getStatsText(stats) + formatLTResult(data, text);
+                            setupOutputLinks();
+                        } else {
                             const currentContent = outputDiv.innerHTML;
-                            outputDiv.innerHTML = currentContent + dmxAppend;
+                            outputDiv.innerHTML = currentContent + '\n\n' + '─'.repeat(50) + '\n\n📋 LanguageTool 详细检测：\n' + formatLTResult(data, text);
+                            setupOutputLinks();
+                        }
+                        generateKnowledgeCards([...allIssueTypes]);
+                    } catch (err) {
+                        console.log('LT错误:', err);
+                        ltFinished = true;
+                        if (!dmxFinished) outputDiv.innerHTML = 'LanguageTool 检测失败，正在等待 AI 结果...';
+                    }
+                })();
+                const dmxPromise = (async () => {
+                    try {
+                        const result = await callDMXAPI(text);
+                        dmxFinished = true;
+                        if (result && result.errors && result.errors.length > 0) {
+                            const dmxHighlights = convertDMXToMatches(result, text);
+                            lastDMXMatches = dmxHighlights;
+                            updateHighlight();
+                        }
+                        if (!ltFinished) {
+                            const stats = getWritingStats(text);
+                            let dmxOutput = getStatsText(stats) + '✨ AI 智能分析结果：\n\n';
+                            dmxOutput += (result && result.errors && result.errors.length > 0) ? formatDMXDetails(result) : '✨ 未发现语法问题\n';
+                            outputDiv.innerHTML = dmxOutput;
+                            setupOutputLinks();
+                        } else {
+                            const dmxAppend = formatDMXAppend(result);
+                            if (dmxAppend) {
+                                const currentContent = outputDiv.innerHTML;
+                                outputDiv.innerHTML = currentContent + dmxAppend;
+                                setupOutputLinks();
+                            }
+                        }
+                        generateKnowledgeCards([...allIssueTypes]);
+                    } catch (err) {
+                        console.log('DMX错误:', err);
+                        dmxFinished = true;
+                        if (!ltFinished) {
+                            outputDiv.innerHTML = 'AI 分析暂时不可用，正在等待 LanguageTool 结果...';
+                        } else {
+                            outputDiv.innerHTML += '\n\n⚠️ AI 进阶分析暂时不可用，请稍后重试。当前显示为 LanguageTool 检测结果。';
                             setupOutputLinks();
                         }
                     }
-                    // ===== 新增：DMX 完成后立即更新知识卡片 =====
-                    generateKnowledgeCards([...allIssueTypes]);
-                } catch (err) {
-                    console.log('DMX错误:', err);
-                    dmxFinished = true;
-                    if (!ltFinished) outputDiv.innerHTML = 'AI 分析失败，正在等待 LanguageTool 结果...';
-                }
-            })();
-            await Promise.all([ltPromise, dmxPromise]);
-            checkBtn.innerText = originalText;
-            updateCheckButtonState();
-        }
-
-        function triggerFileUpload() { fileInput.click(); }
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            if (file.size > 5*1024*1024) return showError("文件 > 5MB");
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                setEditorText(ev.target.result);
-                lastLTMatches = [];
-                lastDMXMatches = [];
-                updateHighlight();
-                outputDiv.innerHTML = '语法检查结果将显示在这里...';
-                clearKnowledgeCards();
+                })();
+                await Promise.all([ltPromise, dmxPromise]);
+                checkBtn.innerText = originalText;
                 updateCheckButtonState();
-                firstResultShown = false;
-            };
-            reader.readAsText(file, 'UTF-8');
-            fileInput.value = '';
-        }
-
-        checkBtn.addEventListener('click', checkGrammar);
-        uploadBtn.addEventListener('click', triggerFileUpload);
-        resetBtn.addEventListener('click', resetAll);
-        inputEditor.addEventListener('input', () => {
-            if(lastLTMatches.length || lastDMXMatches.length) {
-                lastLTMatches = [];
-                lastDMXMatches = [];
-                updateHighlight();
-                clearKnowledgeCards();
-                firstResultShown = false;
             }
+
+            function triggerFileUpload() { fileInput.click(); }
+            function handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 5*1024*1024) return showError("文件 > 5MB");
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    setEditorText(ev.target.result);
+                    lastLTMatches = [];
+                    lastDMXMatches = [];
+                    updateHighlight();
+                    outputDiv.innerHTML = '语法检查结果将显示在这里...';
+                    clearKnowledgeCards();
+                    updateCheckButtonState();
+                    firstResultShown = false;
+                };
+                reader.readAsText(file, 'UTF-8');
+                fileInput.value = '';
+            }
+
+            checkBtn.addEventListener('click', checkGrammar);
+            uploadBtn.addEventListener('click', triggerFileUpload);
+            resetBtn.addEventListener('click', resetAll);
+            inputEditor.addEventListener('input', () => {
+                if(lastLTMatches.length || lastDMXMatches.length) {
+                    lastLTMatches = [];
+                    lastDMXMatches = [];
+                    updateHighlight();
+                    clearKnowledgeCards();
+                    firstResultShown = false;
+                }
+                updateCheckButtonState();
+            });
+            fileInput.addEventListener('change', handleFileSelect);
             updateCheckButtonState();
-        });
-        fileInput.addEventListener('change', handleFileSelect);
-        updateCheckButtonState();
-        setupOutputLinks();
-        inputEditor.addEventListener('keydown', (e) => { if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !checkBtn.disabled) checkGrammar(); });
-        inputEditor.addEventListener('paste', function(e) {
-            e.preventDefault();
-            const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-            document.execCommand('insertText', false, text);
-        });
-        if (getEditorText() === '') {
-            inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
-        }
-        console.log('[DMX] 增强模式已启用');
-    </script>
-</body>
+            setupOutputLinks();
+            inputEditor.addEventListener('keydown', (e) => { if((e.ctrlKey||e.metaKey) && e.key==='Enter' && !checkBtn.disabled) checkGrammar(); });
+            inputEditor.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                document.execCommand('insertText', false, text);
+            });
+            if (getEditorText() === '') {
+                inputEditor.setAttribute('data-placeholder', '请粘贴需要检测的文本，或点击「上传附件」选择文件（暂时仅支持.txt格式）');
+            }
+            console.log('[DMX] 增强模式已启用');
+        </script>
+    </body>
 </html>
